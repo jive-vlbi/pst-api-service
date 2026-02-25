@@ -64,7 +64,7 @@ public class SubjectMapResource extends ObjectResourceBase {
     public void initKeyCloak() {
         keycloak = KeycloakBuilder.builder()
                 .serverUrl(authServerMaster)
-                .realm("master")
+                .realm(polarisRealmName)
                 .clientId("admin-cli")
                 .grantType("password")
                 .username(admin_username)
