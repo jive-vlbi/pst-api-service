@@ -210,6 +210,24 @@ public class ObservationResource extends ObjectResourceBase {
     }
 
     @PUT
+    @Path("/{observationId}/resources")
+    @Operation(summary = "replace the RequestedResources of the given Observation for the given ObservingProposal")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    public Response replaceRequestedResources(@PathParam("proposalCode") Long proposalCode,
+                                             @PathParam("observationId") Long observationId,
+                                             RequestedResources requestedResources)
+            throws WebApplicationException
+    {
+        ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
+        Observation observation =
+                findObservation(observingProposal.getObservations(), observationId, proposalCode);
+        observation.setRequestedResources(requestedResources);
+
+        return responseWrapper(observation, 201);
+    }
+
+    @PUT
     @Path("{observationId}/calibrationIntendedUse")
     @Operation(summary = "replace the IntendedUse of the given CalibrationObservation")
     @Consumes(MediaType.APPLICATION_JSON)
