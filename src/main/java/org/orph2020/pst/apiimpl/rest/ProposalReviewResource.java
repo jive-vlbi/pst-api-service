@@ -116,7 +116,7 @@ public class ProposalReviewResource extends ObjectResourceBase{
     @Operation(summary = "update the review with a new comment")
     @Consumes(MediaType.TEXT_PLAIN)
     @Transactional(rollbackOn = {WebApplicationException.class})
-    public ProposalReview updateReviewComment(
+    public Response updateReviewComment(
             @PathParam("cycleCode") Long cycleCode,
             @PathParam("submittedProposalId") Long submittedProposalId,
             @PathParam("reviewId") Long reviewId,
@@ -140,7 +140,7 @@ public class ProposalReviewResource extends ObjectResourceBase{
 
         em.merge(proposalReview);
 
-        return proposalReview;
+        return Response.ok().build();
     }
 
     @PUT
@@ -148,7 +148,7 @@ public class ProposalReviewResource extends ObjectResourceBase{
     @Operation(summary = "update the review with a new score")
     @Consumes(MediaType.TEXT_PLAIN)
     @Transactional(rollbackOn = {WebApplicationException.class})
-    public ProposalReview updateReviewScore(@PathParam("cycleCode") Long cycleCode,
+    public Response updateReviewScore(@PathParam("cycleCode") Long cycleCode,
                                             @PathParam("submittedProposalId") Long submittedProposalId,
                                             @PathParam("reviewId") Long reviewId,
                                             Double replacementScore
@@ -171,7 +171,7 @@ public class ProposalReviewResource extends ObjectResourceBase{
 
         em.merge(proposalReview);
 
-        return proposalReview;
+        return Response.ok().build();
     }
 
     @PUT
@@ -179,7 +179,7 @@ public class ProposalReviewResource extends ObjectResourceBase{
     @Operation(summary = "update the technical feasibility of the review")
     @Consumes(MediaType.TEXT_PLAIN)
     @Transactional(rollbackOn = {WebApplicationException.class})
-    public ProposalReview updateReviewFeasibility(
+    public Response updateReviewFeasibility(
             @PathParam("cycleCode") Long cycleCode,
             @PathParam("submittedProposalId") Long submittedProposalId,
             @PathParam("reviewId") Long reviewId,
@@ -203,7 +203,7 @@ public class ProposalReviewResource extends ObjectResourceBase{
 
         em.merge(proposalReview);
 
-        return proposalReview;
+        return Response.ok().build();
     }
 
     //confirmation that the review is complete
@@ -211,7 +211,7 @@ public class ProposalReviewResource extends ObjectResourceBase{
     @Path("/{reviewId}/confirmReview")
     @Operation(summary = "confirm the review is complete")
     @Transactional(rollbackOn = {WebApplicationException.class})
-    public ProposalReview confirmReviewComplete(
+    public Response confirmReviewComplete(
             @PathParam("cycleCode") Long cycleCode,
             @PathParam("submittedProposalId") Long reviewedProposalId,
             @PathParam("reviewId") Long reviewId
@@ -225,7 +225,7 @@ public class ProposalReviewResource extends ObjectResourceBase{
 
         em.merge(proposalReview);
 
-        return proposalReview;
+        return Response.ok().build();
     }
 
 

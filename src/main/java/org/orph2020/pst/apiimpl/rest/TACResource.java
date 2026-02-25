@@ -109,6 +109,7 @@ public class TACResource extends ObjectResourceBase {
 
         TAC tac = proposalCycle.getTac();
 
+        reviewer.setPerson(newMember);
         CommitteeMember committeeMember = new CommitteeMember(reviewer, TacRole.fromValue(tacRole));
 
         addNewChildObject(tac, committeeMember, tac::addToMembers);
