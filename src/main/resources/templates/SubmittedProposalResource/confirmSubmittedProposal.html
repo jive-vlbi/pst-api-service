@@ -29,8 +29,12 @@
         {/for}
     </ul>
     <p>
-        Your proposal has been submitted to '{proposal.cycle}'. The principal investigator may withdraw this
-        proposal at any time, up to the submission deadline for '{proposal.cycle}' ({proposal.submissionDeadline}).
+        Your proposal has been submitted to '{proposal.cycle}'.
+        {#if proposal.submissionDeadline == ""}
+            This is an immediate response cycle, so the proposal cannot be withdrawn.
+        {#else}
+            The principal investigator may withdraw this proposal at any time, up to the submission deadline for '{proposal.cycle}' ({proposal.submissionDeadline}).
+        {/if}
     </p>
     <p>
         Sent from the Polaris Observation Proposal Preparation Tool.

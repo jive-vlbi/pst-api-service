@@ -66,6 +66,10 @@ public class SubmittedProposalResource extends ObjectResourceBase{
         public static native
         MailTemplate.MailTemplateInstance
         confirmSubmittedProposal(SubmittedProposalMailData proposal);
+
+        public static native
+        MailTemplate.MailTemplateInstance
+        notifyTACSubmission(SubmittedProposalMailData proposal);
     }
 
     @GET
@@ -306,8 +310,26 @@ public class SubmittedProposalResource extends ObjectResourceBase{
               error -> Log.error("submission mail failed", error)
         );
 
+        if (cycle.getSubmissionDeadline() == null) {
+            Log.info("Submitted proposal " + submittedProposal.getTitle() + " in immediate response cycle " + cycle.getTitle() + " - notify TAC");
+            recipientEmails.clear();
+            for (CommitteeMember tacMember : cycle.getTac().getMembers()) {
+                recipientEmails.add(tacMember.getMember().getPerson().getEMail());
+            }
 
-       return emptyResponse204();
+            Uni<Void> tacMail = Templates.notifyTACSubmission(mailData)
+             .to(recipientEmails.toArray(new String[0]))
+             .subject("Notification: " + submittedProposal.getTitle() + " submitted to " + cycle.getTitle())
+             .send();
+
+            tacMail.subscribe().with(
+                  item -> Log.info("TAC notification mail sent"),
+                  error -> Log.error("TAC notification mail failed", error)
+            );
+        }
+
+
+        return emptyResponse204();
     }
 
 

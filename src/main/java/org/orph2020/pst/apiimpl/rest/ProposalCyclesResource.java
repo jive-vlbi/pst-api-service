@@ -97,9 +97,9 @@ public class ProposalCyclesResource extends ObjectResourceBase {
 
         if(!includeClosed)
             if(observatoryId == 0)
-                query += " WHERE p.submissionDeadline > CURRENT_TIMESTAMP() ";
+                query += " WHERE (p.submissionDeadline IS NULL OR p.submissionDeadline > CURRENT_TIMESTAMP()) ";
             else
-                query += " WHERE p.submissionDeadline > CURRENT_TIMESTAMP() AND p.observatory._id = "+observatoryId;
+                query += " WHERE (p.submissionDeadline IS NULL OR p.submissionDeadline > CURRENT_TIMESTAMP()) AND p.observatory._id = "+observatoryId;
         else //include closed
             if(observatoryId > 0)
                 query += " WHERE p.observatory._id = "+observatoryId;
@@ -125,18 +125,23 @@ public class ProposalCyclesResource extends ObjectResourceBase {
 
     @GET
     @Operation(summary = "list the proposal cycles, optionally filter by observatory id and closed (passed submission deadline)")
-    public List<ObjectIdentifier> getProposalCycles(@RestQuery boolean includeClosed, @RestQuery long observatoryId) {
+    public List<ObjectIdentifier> getProposalCycles(@RestQuery boolean includeClosed, @RestQuery long observatoryId, @RestQuery boolean immediateOnly) {
         String select = "SELECT o._id,o.title FROM ProposalCycle o ";
+        List<String> whereList = new ArrayList<>();
         String where = "";
-        String order = "ORDER BY o.submissionDeadline";
+        String order = " ORDER BY o.submissionDeadline";
 
         if(!includeClosed) {
-            where = "WHERE o.submissionDeadline > CURRENT_TIMESTAMP() ";
-            if (observatoryId > 0)
-                where += "AND o.observatory._id = "+observatoryId+" ";
-        } else {
-            if (observatoryId > 0)
-                where = "WHERE o.observatory._id = "+observatoryId+" ";
+            whereList.add("(o.submissionDeadline IS NULL OR o.submissionDeadline > CURRENT_TIMESTAMP())");
+        }
+        if (observatoryId > 0) {
+            whereList.add("o.observatory._id = "+observatoryId);
+        }
+        if(immediateOnly) {
+            whereList.add("o.submissionDeadline IS NULL");
+        }
+        if (whereList.size() > 0) {
+            where = "WHERE "+String.join(" AND ", whereList);
         }
 
         return super.getObjectIdentifiers(select + where + order);

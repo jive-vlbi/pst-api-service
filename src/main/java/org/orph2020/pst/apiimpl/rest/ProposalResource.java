@@ -292,11 +292,10 @@ public class ProposalResource extends ObjectResourceBase {
             valid = false;
             error.append("No observations defined.<br/>");
         } else if(cycleId != 0) {
-            ProposalCycleSynopsis theCycleDates = proposalCyclesResource.getProposalCycleDetails(cycleId);
-
             //Has proposal cycle submission deadline passed?
             Date now = new Date();
-            if(now.after(theCycleDates.submissionDeadline)) {
+            Date submissionDeadline = proposalCyclesResource.getProposalCycleDetails(cycleId).submissionDeadline;
+            if(submissionDeadline != null && now.after(submissionDeadline)) {
                 valid = false;
                 error.append("The submission deadline has passed.<br/>");
             }
