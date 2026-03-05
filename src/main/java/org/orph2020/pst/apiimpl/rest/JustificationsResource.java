@@ -155,19 +155,6 @@ public class JustificationsResource extends ObjectResourceBase {
     }
 
     @POST
-    @Path("AdminPdf")
-    @RolesAllowed({"tac_admin"})
-    @Operation(summary = "create a PDF summary of the whole proposal, for TAC administrators only")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Transactional(rollbackOn = {WebApplicationException.class})
-    public Response createTACAdminPDF(@PathParam("proposalCode") Long proposalCode)
-        throws WebApplicationException, IOException
-    {
-        // Access permission check here, is this user an admin for this cycle's observatory?
-        return createPDFfile(proposalCode, false, true, texFileName);//texAdminFileName);
-    }
-
-    @POST
     @Path("ReviewPdf")
     @RolesAllowed({"tac_member", "tac_admin"})
     @Operation(summary = "create and download an anonymised summary of the whole proposal in a zip with compiled justifications, for reviewers only")
