@@ -188,7 +188,7 @@ public class JustificationsResource extends ObjectResourceBase {
         });
 
         if(!foundReviewer.get())
-            return Response.status(Response.Status.UNAUTHORIZED).build();
+            return Response.status(Response.Status.FORBIDDEN).build();
 
         // Create Zip file of anonymised proposal overview html doc and justifications pdf.
         return createPDFfile(proposalCode, false, true, texFileName);
