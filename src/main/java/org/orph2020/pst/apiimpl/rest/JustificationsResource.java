@@ -203,8 +203,6 @@ public class JustificationsResource extends ObjectResourceBase {
     public Response downloadReviewerZip(@PathParam("proposalCode") Long proposalCode)
             throws WebApplicationException, IOException
     {
-        createReviewPDF(proposalCode);
-
         SubmittedProposal proposal = findObject(SubmittedProposal.class, proposalCode);
 
         return Response.ok(proposalResource.CreateZipFile("Review.zip", proposal, true, false ))
