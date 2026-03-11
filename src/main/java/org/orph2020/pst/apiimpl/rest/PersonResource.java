@@ -6,6 +6,7 @@ package org.orph2020.pst.apiimpl.rest;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.TypedQuery;
+import jakarta.inject.Inject;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.management.Reviewer;
@@ -30,6 +31,8 @@ import java.util.stream.Collectors;
 @Tag(name = "people")
 @ApplicationScoped
 public class PersonResource extends ObjectResourceBase {
+   @Inject
+   SubjectMapResource subjectMapResource;
 
    @GET
    @Operation(summary = "get People from the database, optionally provide a name to find all the people with that name")
@@ -119,6 +122,11 @@ public class PersonResource extends ObjectResourceBase {
    public Response deletePerson(@PathParam("id") Long id)
            throws WebApplicationException
    {
+      // First at least have to remove the SubjectMap entry,
+      // any other references to this person may have to be replaced by a placeholder? (TODO)
+      SubjectMap subjectMap = subjectMapResource.findSubjectMap(id);
+      removeObject(SubjectMap.class, subjectMap._id);
+      
       return removeObject(Person.class, id);
    }
 

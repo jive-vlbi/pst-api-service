@@ -308,7 +308,7 @@ public class SubjectMapResource extends ObjectResourceBase {
     }
 
     //convenience functions
-    private SubjectMap findSubjectMap(Long personId) {
+    public SubjectMap findSubjectMap(Long personId) {
         String queryStr = "select o from SubjectMap o where o.person._id = :id";
         TypedQuery<SubjectMap> q = em.createQuery(queryStr, SubjectMap.class);
         return q.setParameter("id", personId).getSingleResult();
