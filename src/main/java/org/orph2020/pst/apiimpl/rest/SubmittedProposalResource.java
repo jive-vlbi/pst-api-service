@@ -19,6 +19,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.management.*;
 import org.ivoa.dm.proposal.prop.*;
 import org.jboss.resteasy.reactive.RestQuery;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 import org.orph2020.pst.apiimpl.ProposalCodeGenerator;
 import org.orph2020.pst.apiimpl.entities.SubmissionConfiguration;
 import org.orph2020.pst.common.json.ObjectIdentifier;
@@ -30,7 +31,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Set;
 import io.quarkus.logging.Log;
 
 @Path("proposalCycles/{cycleCode}/submittedProposals")
@@ -236,21 +237,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
 
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalId);
 
-        //Only a PI can submit this proposal
-        Person currentUser = subjectMapResource.subjectMap(userInfo.getSubject()).getPerson();
-
-        //Check this person has rights to withdraw this submitted proposal
-        AtomicBoolean foundPI = new AtomicBoolean(false);
-        proposal.getInvestigators().forEach(investigator -> {
-            if(investigator.getType() == InvestigatorKind.PI
-                    && investigator.getPerson() == currentUser)
-                foundPI.set(true);
-        });
-
-        //Authenticated user is not associated with this submittedProposal.
-        if(!foundPI.get()) {
-            throw new WebApplicationException("You are not a PI on this proposal", Response.Status.FORBIDDEN);
-        }
+        CurrentUserChecks.assertCurrentUserIsPI(userInfo, subjectMapResource, proposal);
 
         List<ObservationConfiguration> configMappings = new ArrayList<>();
         for (SubmissionConfiguration.ObservationConfigMapping cm: submissionConfiguration.config)
@@ -327,7 +314,6 @@ public class SubmittedProposalResource extends ObjectResourceBase{
                   error -> Log.error("TAC notification mail failed", error)
             );
         }
-
 
         return emptyResponse204();
     }

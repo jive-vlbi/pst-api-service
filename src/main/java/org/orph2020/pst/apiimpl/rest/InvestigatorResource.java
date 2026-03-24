@@ -2,12 +2,16 @@ package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.ivoa.dm.proposal.prop.Investigator;
 import org.ivoa.dm.proposal.prop.InvestigatorKind;
 import org.ivoa.dm.proposal.prop.ObservingProposal;
 import org.jboss.resteasy.reactive.RestQuery;
+import org.orph2020.pst.apiimpl.rest.SubjectMapResource;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 
 import jakarta.persistence.TypedQuery;
@@ -23,6 +27,11 @@ import java.util.List;
 @ApplicationScoped
 @RolesAllowed("default-roles-orppst")
 public class InvestigatorResource extends ObjectResourceBase {
+    @Inject
+    JsonWebToken userInfo;
+
+    @Inject
+    SubjectMapResource subjectMapResource;
 
     private Investigator findInvestigatorFromList(List<Investigator> investigators, long id) {
         return investigators
@@ -45,6 +54,7 @@ public class InvestigatorResource extends ObjectResourceBase {
                                                    @RestQuery String fullName)
             throws WebApplicationException
     {
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         if (fullName == null) {
             return getObjectIdentifiers(
                     "Select i._id,p.fullName From ObservingProposal o Inner join o.investigators i Inner join i.person p where o._id = "+proposalCode+" ORDER BY p.fullName"
@@ -60,7 +70,7 @@ public class InvestigatorResource extends ObjectResourceBase {
     @Path("/asObjects")
     @Operation(summary = "get a list of Investigators for a given ObservingProposal, returns a list of investigator objects")
     public List<Investigator> getInvestigatorsAsObjects(@PathParam("proposalCode") Long proposalCode) {
-        //List<Investigator> result = new ArrayList<>();
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         TypedQuery<Investigator> q = em.createQuery(
                 "Select i from ObservingProposal p join p.investigators i where p._id = :pid order by i._id",
                 Investigator.class);
@@ -76,6 +86,7 @@ public class InvestigatorResource extends ObjectResourceBase {
                                         @PathParam("investigatorId") Long id)
             throws WebApplicationException
     {
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         return findInvestigatorByQuery(proposalCode, id);
     }
 
@@ -89,6 +100,11 @@ public class InvestigatorResource extends ObjectResourceBase {
             throws WebApplicationException
     {
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalCode);
+        if (investigator.getType() == InvestigatorKind.PI) {
+            CurrentUserChecks.assertCurrentUserIsPI(userInfo, subjectMapResource, proposal);
+        } else {
+            CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, proposal);
+        }
         return addNewChildObject(proposal, investigator, proposal::addToInvestigators);
     }
 
@@ -101,6 +117,7 @@ public class InvestigatorResource extends ObjectResourceBase {
             throws WebApplicationException
     {
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
+        CurrentUserChecks.assertCurrentUserIsPI(userInfo, subjectMapResource, observingProposal);
 
         Investigator investigator = findInvestigatorFromList(observingProposal.getInvestigators(), id);
 
@@ -127,6 +144,7 @@ public class InvestigatorResource extends ObjectResourceBase {
                                            InvestigatorKind replacementKind)
             throws WebApplicationException
     {
+        CurrentUserChecks.assertCurrentUserIsPI(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         Investigator investigator = findInvestigatorByQuery(proposalCode, id);
         investigator.setType(replacementKind);
         return responseWrapper(investigator, 201);
@@ -142,6 +160,7 @@ public class InvestigatorResource extends ObjectResourceBase {
                                              Boolean replacementForPhD)
             throws WebApplicationException
     {
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         Investigator investigator = findInvestigatorByQuery(proposalCode, id);
         investigator.setForPhD(replacementForPhD);
 

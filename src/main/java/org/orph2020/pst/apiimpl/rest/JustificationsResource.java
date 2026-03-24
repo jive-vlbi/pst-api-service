@@ -1,17 +1,20 @@
 package org.orph2020.pst.apiimpl.rest;
 
-
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
+import org.orph2020.pst.apiimpl.rest.SubjectMapResource;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.persistence.TypedQuery;
 import org.apache.commons.io.FileUtils;
 import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.management.SubmittedProposal;
+import org.ivoa.dm.proposal.management.ProposalCycle;
 import org.ivoa.dm.proposal.prop.*;
 import org.jboss.resteasy.reactive.RestQuery;
 
@@ -57,6 +60,7 @@ public class JustificationsResource extends ObjectResourceBase {
                                           @PathParam("which") String which)
             throws WebApplicationException
     {
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
 
         //avoid returning nulls to frontend clients
@@ -90,6 +94,7 @@ public class JustificationsResource extends ObjectResourceBase {
     )
         throws WebApplicationException
     {
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         Justification justification = getWhichJustification(proposalCode, which);
 
         if (justification == null) {
@@ -116,6 +121,7 @@ public class JustificationsResource extends ObjectResourceBase {
             throws WebApplicationException
     {
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalCode);
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, proposal);
         Justification justification = getWhichJustification(proposalCode, which);
 
         if (justification != null) {
@@ -147,11 +153,19 @@ public class JustificationsResource extends ObjectResourceBase {
     public Response checkForPdf(@PathParam("proposalCode") Long proposalCode)
         throws WebApplicationException
     {
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         return responseWrapper(
                 proposalDocumentStore
                         .fetchFile(supportingDocumentsPath(proposalCode) + jobName + ".pdf")
                         .exists(), 200
         );
+    }
+
+    private ProposalCycle getProposalCycle(Long proposalCode) {
+        String queryStr = "select c from ProposalCycle c join c.submittedProposals sp where sp._id = :proposalId";
+        TypedQuery<ProposalCycle> query = em.createQuery(queryStr, ProposalCycle.class);
+        query.setParameter("proposalId", proposalCode);
+        return query.getSingleResult();
     }
 
     @POST
@@ -164,20 +178,11 @@ public class JustificationsResource extends ObjectResourceBase {
             throws WebApplicationException, IOException
     {
         // Access permission check, is this user a reviewer for this submitted proposal?
-        SubmittedProposal proposal = findObject(SubmittedProposal.class, proposalCode);
-        AtomicBoolean foundReviewer = new AtomicBoolean(false);
-
-        // Check I'm a reviewer
-        proposal.getReviews().forEach(review -> {
-            if(Objects.equals(review.getReviewer().getPerson().getId(),
-                    subjectMapResource.subjectMap(userInfo.getSubject()).getPerson().getId()))
-                foundReviewer.set(true);
-        });
-
-        if(!foundReviewer.get())
-            return Response.status(Response.Status.FORBIDDEN).build();
+        ProposalCycle proposalCycle = getProposalCycle(proposalCode);
+        CurrentUserChecks.assertCurrentUserIsReviewer(userInfo, subjectMapResource, proposalCycle);
 
         // Create Zip file of anonymised proposal overview html doc and justifications pdf.
+        SubmittedProposal proposal = findObject(SubmittedProposal.class, proposalCode);
         return createPDFfile(proposalCode, false, true, texFileName);
     }
 
@@ -190,8 +195,11 @@ public class JustificationsResource extends ObjectResourceBase {
     public Response downloadReviewerZip(@PathParam("proposalCode") Long proposalCode)
             throws WebApplicationException, IOException
     {
-        SubmittedProposal proposal = findObject(SubmittedProposal.class, proposalCode);
+        // Access permission check, is this user a reviewer for this submitted proposal?
+        ProposalCycle proposalCycle = getProposalCycle(proposalCode);
+        CurrentUserChecks.assertCurrentUserIsReviewer(userInfo, subjectMapResource, proposalCycle);
 
+        SubmittedProposal proposal = findObject(SubmittedProposal.class, proposalCode);
         return Response.ok(proposalResource.CreateZipFile("Review.zip", proposal, true, false ))
                 .header("Content-Disposition", "attachment; filename=" + "Review.zip")
                 .build();
@@ -209,6 +217,7 @@ public class JustificationsResource extends ObjectResourceBase {
     )
             throws WebApplicationException, IOException {
         // Access permission check, is this user an investigator in this proposal?
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         return createPDFfile(proposalCode, warningsAsErrors, submittedProposal, texFileName);
 
     }
@@ -385,6 +394,7 @@ public class JustificationsResource extends ObjectResourceBase {
     public Response downloadLatexPdf(@PathParam("proposalCode") Long proposalCode)
         throws WebApplicationException {
 
+        CurrentUserChecks.assertCurrentUserIsInvestigator(userInfo, subjectMapResource, findObject(ObservingProposal.class, proposalCode));
         justificationIsLatex(proposalCode);
 
         //fetch the output PDF of the Justification
