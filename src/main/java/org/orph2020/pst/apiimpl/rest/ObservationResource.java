@@ -45,7 +45,7 @@ public class ObservationResource extends ObjectResourceBase {
             throws WebApplicationException
     {
         String select = type == ObsType.CalibrationObservation ?
-                "select o._id,concat(cast(Type(o) as string), ':',o.intent),t.sourceName " :
+                "select o._id,concat(cast(Type(o) as string), ':',o.intents),t.sourceName " :
                 "select o._id,cast(Type(o) as string),t.sourceName ";
         String from = "from ObservingProposal p ";
         String innerJoin = "inner join p.observations o inner join o.target t ";
@@ -68,8 +68,8 @@ public class ObservationResource extends ObjectResourceBase {
 
         // edit the 'type' name i.e., the ObjectIdentifier.code member, to use as a display string
         // general format: 'proposal:<Type>Observation'
-        // query ObsType='CalibrationObservation' format: 'proposal:CalibrationObservation:<INTENT>'
-        // we want '<Type>' in general, and 'Calibration (<intent>)' for the specified query
+        // query ObsType='CalibrationObservation' format: 'proposal:CalibrationObservation:<INTENTS>'
+        // we want '<Type>' in general, and 'Calibration (<intents>)' for the specified query
 
         if (type == ObsType.CalibrationObservation) {
             //specific query case
@@ -234,14 +234,14 @@ public class ObservationResource extends ObjectResourceBase {
     @Transactional(rollbackOn = {WebApplicationException.class})
     public Response replaceIntendedUse(@PathParam("proposalCode") Long proposalCode,
                                        @PathParam("observationId") Long observationId,
-                                       CalibrationTarget_intendedUse replacementUse)
+                                       List<CalibrationTarget_intendedUse> replacementUse)
         throws WebApplicationException
     {
         Observation observingProposal = findChildByQuery(ObservingProposal.class, Observation.class,
                 "observations", proposalCode, observationId);
 
         if (observingProposal instanceof CalibrationObservation) {
-            ((CalibrationObservation) observingProposal).setIntent(replacementUse);
+            ((CalibrationObservation) observingProposal).setIntents(replacementUse);
         } else {
             throw new WebApplicationException(
                     String.format("Observation with id %d is NOT a CalibrationObservation", observationId)
