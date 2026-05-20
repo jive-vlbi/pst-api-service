@@ -23,6 +23,8 @@ import org.orph2020.pst.apiimpl.ProposalCodeGenerator;
 import org.orph2020.pst.apiimpl.entities.SubmissionConfiguration;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 import org.orph2020.pst.common.json.SubmittedProposalMailData;
+import org.orph2020.pst.apiimpl.KeycloakUtil;
+import org.orph2020.pst.apiimpl.entities.SubjectMap;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,6 +58,9 @@ public class SubmittedProposalResource extends ObjectResourceBase{
 
     @Inject
     JustificationsResource justificationsResource;
+
+    @Inject
+    KeycloakUtil keycloakUtil;
 
     @CheckedTemplate
     static class Templates {
@@ -289,6 +294,13 @@ public class SubmittedProposalResource extends ObjectResourceBase{
 
         cycle.addToSubmittedProposals(submittedProposal);
         em.merge(cycle);
+
+        // create the Keycloak groups and roles for this proposal
+        keycloakUtil.createProposal(submittedProposal.getId());
+        for (Investigator investigator : submittedProposal.getInvestigators()) {
+            SubjectMap subjectMap = subjectMapResource.findSubjectMap(investigator.getPerson().getId());
+            keycloakUtil.addToProposal(submittedProposal.getId(), subjectMap.uid, investigator.getType());
+        }
 
         SubmittedProposalMailData mailData = new SubmittedProposalMailData(submittedProposal, cycle);
 

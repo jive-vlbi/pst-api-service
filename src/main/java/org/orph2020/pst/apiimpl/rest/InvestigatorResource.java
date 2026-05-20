@@ -8,6 +8,8 @@ import org.ivoa.dm.proposal.prop.Investigator;
 import org.ivoa.dm.proposal.prop.InvestigatorKind;
 import org.ivoa.dm.proposal.prop.ObservingProposal;
 import org.jboss.resteasy.reactive.RestQuery;
+import org.orph2020.pst.apiimpl.KeycloakUtil;
+import org.orph2020.pst.apiimpl.entities.SubjectMap;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 
 import jakarta.persistence.TypedQuery;
@@ -23,6 +25,12 @@ import java.util.List;
 @ApplicationScoped
 @RolesAllowed("default-roles-orppst")
 public class InvestigatorResource extends ObjectResourceBase {
+    @Inject
+    KeycloakUtil keycloakUtil;
+
+    @Inject
+    SubjectMapResource subjectMapResource;
+
 
     private Investigator findInvestigatorFromList(List<Investigator> investigators, long id) {
         return investigators
@@ -89,6 +97,8 @@ public class InvestigatorResource extends ObjectResourceBase {
             throws WebApplicationException
     {
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalCode);
+        SubjectMap subjectMap = subjectMapResource.findSubjectMap(investigator.getPerson().getId());
+        keycloakUtil.addToProposal(proposalCode, subjectMap.uid, investigator.getType());
         return addNewChildObject(proposal, investigator, proposal::addToInvestigators);
     }
 
@@ -112,6 +122,8 @@ public class InvestigatorResource extends ObjectResourceBase {
         }
 
         observingProposal.removeFromInvestigators(investigator);
+        SubjectMap subjectMap = subjectMapResource.findSubjectMap(investigator.getPerson().getId());
+        keycloakUtil.removeFromProposal(proposalCode, subjectMap.uid, investigator.getType());
 
         return emptyResponse204();
     }
@@ -128,7 +140,13 @@ public class InvestigatorResource extends ObjectResourceBase {
             throws WebApplicationException
     {
         Investigator investigator = findInvestigatorByQuery(proposalCode, id);
-        investigator.setType(replacementKind);
+        if (investigator.getType() != replacementKind) {
+            investigator.setType(replacementKind);
+            SubjectMap subjectMap = subjectMapResource.findSubjectMap(investigator.getPerson().getId());
+            keycloakUtil.setInvestigatorType(subjectMap.uid,
+                                             replacementKind,
+                                             proposalCode);
+        }
         return responseWrapper(investigator, 201);
     }
 

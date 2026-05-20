@@ -26,6 +26,8 @@ import org.jboss.resteasy.reactive.multipart.FileUpload;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 import org.orph2020.pst.common.json.ProposalCycleSynopsis;
 import org.orph2020.pst.common.json.ProposalSynopsis;
+import org.orph2020.pst.apiimpl.KeycloakUtil;
+import org.orph2020.pst.apiimpl.entities.SubjectMap;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.persistence.Query;
@@ -93,6 +95,8 @@ public class ProposalResource extends ObjectResourceBase {
     @Inject
     SupportingDocumentResource supportingDocumentResource;
 
+    @Inject
+    KeycloakUtil keycloakUtil;
 
     private List<ProposalSynopsis> getSynopses(String queryStr) {
         List<ProposalSynopsis> result = new ArrayList<>();
@@ -193,8 +197,31 @@ public class ProposalResource extends ObjectResourceBase {
             //if these directories cannot be created, then we should roll back
             throw new WebApplicationException(e);
         }
-
+        // create the Keycloak groups and roles for this proposal
+        keycloakUtil.createProposal(persisted.getId());
+        for (Investigator investigator : persisted.getInvestigators()) {
+            SubjectMap subjectMap = subjectMapResource.findSubjectMap(investigator.getPerson().getId());
+            keycloakUtil.addToProposal(persisted.getId(), subjectMap.uid, investigator.getType());
+        }
         return persisted;
+    }
+
+    @POST
+    @Path("/kcfix/{proposalCode}")
+    @Operation(summary = "create a new Proposal in the database")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    @ResponseStatus(value = 201)
+    @RolesAllowed("default-roles-orppst")
+    public void createKcProposal(@PathParam("proposalCode") Long proposalCode)
+            throws WebApplicationException {
+        AbstractProposal proposal = findObject(AbstractProposal.class, proposalCode);
+        // create the Keycloak groups and roles for this proposal
+        keycloakUtil.createProposal(proposalCode);
+        for (Investigator investigator : proposal.getInvestigators()) {
+            SubjectMap subjectMap = subjectMapResource.findSubjectMap(investigator.getPerson().getId());
+            keycloakUtil.addToProposal(proposalCode, subjectMap.uid, investigator.getType());
+        }
     }
 
     @DELETE
@@ -213,6 +240,8 @@ public class ProposalResource extends ObjectResourceBase {
         // IMPL need to delete observations first
         ObservingProposal prop = findObject(ObservingProposal.class, code);
         prop.getObservations().forEach(observation -> em.remove(observation));
+        // delete the Keycloak groups and roles for this proposal
+        keycloakUtil.deleteProposal(code);
         return removeObject(ObservingProposal.class, code);
     }
 
@@ -246,6 +275,12 @@ public class ProposalResource extends ObjectResourceBase {
 
         //add '(clone)' to the end of the title string
         clonedProp.setTitle(modifyProposalTitle(prop.getTitle(), " (clone)"));
+
+        keycloakUtil.createProposal(clonedProp.getId());
+        for (Investigator investigator : clonedProp.getInvestigators()) {
+            SubjectMap subjectMap = subjectMapResource.findSubjectMap(investigator.getPerson().getId());
+            keycloakUtil.addToProposal(clonedProp.getId(), subjectMap.uid, investigator.getType());
+        }
 
         return clonedProp;
     }
