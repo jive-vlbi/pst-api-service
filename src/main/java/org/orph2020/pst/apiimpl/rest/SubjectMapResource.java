@@ -9,9 +9,11 @@ import jakarta.annotation.PreDestroy;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.Response.Status.Family;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 import org.ivoa.dm.ivoa.StringIdentifier;
 import org.ivoa.dm.proposal.prop.Organization;
 import org.ivoa.dm.proposal.prop.Person;
@@ -21,9 +23,17 @@ import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.RoleScopeResource;
+import org.keycloak.admin.client.resource.RolesResource;
+import org.keycloak.admin.client.resource.GroupsResource;
+import org.keycloak.admin.client.resource.GroupResource;
+import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.keycloak.representations.idm.GroupRepresentation;
+import org.keycloak.admin.client.CreatedResponseUtil;
+import jakarta.ws.rs.WebApplicationException;
+import java.util.Arrays;
 import org.orph2020.pst.apiimpl.entities.SubjectMap;
 import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
@@ -41,6 +51,9 @@ import java.util.stream.Collectors;
 @Produces(MediaType.APPLICATION_JSON)
 //@RolesAllowed("default-roles-orppst") the login process itself relies on the subjectMap (path /{id}) function
 public class SubjectMapResource extends ObjectResourceBase {
+    @Inject
+    JsonWebToken userInfo;
+
     @Inject
     CurrentUserChecks currentUserChecks;
 
@@ -361,4 +374,76 @@ public class SubjectMapResource extends ObjectResourceBase {
             }
         }
     }
+
+
+        private void addGroupRole(RolesResource roles,
+                              GroupResource group,
+                              String roleName) {
+        RoleRepresentation role = new RoleRepresentation(roleName, "", false);
+        roles.create(role);
+        // update role ID
+        role = roles.get(roleName).toRepresentation();
+        group.roles().realmLevel().add(Arrays.asList(role));
+    }
+
+    private GroupResource addChildGroup(RolesResource roles,
+                                        GroupsResource groups,
+                                        GroupResource parentGroup,
+                                        String groupName,
+                                        String roleName) {
+        GroupRepresentation groupRepresentation = new GroupRepresentation();
+        groupRepresentation.setName(groupName);
+        Response response = parentGroup.subGroup(groupRepresentation);
+        if (response.getStatusInfo().getFamily() != Family.SUCCESSFUL) {
+            throw new WebApplicationException("Failed to create Keycloak group: " + response.getStatusInfo().getReasonPhrase());
+        }
+        GroupResource childGroup = groups.group(CreatedResponseUtil.getCreatedId(response));
+        addGroupRole(roles, childGroup, roleName);
+        return childGroup;
+    }
+
+    private GroupRepresentation getTopLevelGroup(GroupsResource groups,
+                                                 String groupName,
+                                                 boolean includeHierarchy) {
+        if (includeHierarchy) {
+            GroupRepresentation[] search = groups.query(groupName, true, 0, Integer.MAX_VALUE, false).stream().filter(r -> r.getName().equals(groupName)).toArray(GroupRepresentation[]::new);
+            if (search.length != 1) {
+                throw new WebApplicationException("Failed to find unique Keycloak group '" + groupName + "'.");
+            }
+            return search[0];
+        }
+        else {
+            List<GroupRepresentation> search = groups.groups(groupName, true, 0, Integer.MAX_VALUE, true);
+            if (search.size() != 1) {
+                throw new WebApplicationException("Failed to find unique Keycloak group '" + groupName + "'.");
+            }
+            return search.get(0);
+        }
+    }
+
+    private GroupRepresentation getChildGroup(GroupRepresentation parent,
+                                              String groupName) {
+        GroupRepresentation[] search = parent.getSubGroups().stream().filter(r -> r.getName().equals(groupName)).toArray(GroupRepresentation[]::new);
+        if (search.length != 1) {
+            throw new WebApplicationException("Failed to find unique Keycloak group '" + groupName + "'.");
+        }
+        return search[0];
+    }
+
+    public void newProposal(Long proposalId) {
+        // create groups for the proposal, one for investigators and a child group specific for PIs
+        RolesResource roles = realmOrppst.roles();
+        GroupsResource groups = realmOrppst.groups();
+
+        // both group will be childs of the top level investigators group
+        GroupResource groupResource = groups.group(getTopLevelGroup(groups, "investigators", false).getId());
+
+        groupResource = addChildGroup(roles, groups, groupResource, "investigators of " + proposalId, "proposal_" + proposalId + "_investigator");
+        groupResource = addChildGroup(roles, groups, groupResource, "PIs of " + proposalId, "proposal_" + proposalId + "_pi");
+
+        // current user starts of as a PI
+        realmOrppst.users().get(userInfo.getSubject()).joinGroup(groupResource.toRepresentation().getId());
+    }
+
+
 }
