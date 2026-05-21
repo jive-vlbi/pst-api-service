@@ -68,6 +68,7 @@ public class BackendResource extends ObjectResourceBase{
     @Operation(summary = "add an Observatory backend")
     @Consumes(MediaType.TEXT_PLAIN)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("obs_administration")
     public Response addBackend(@PathParam("observatoryId") Long observatoryId, Long backendId)
             throws WebApplicationException
     {
@@ -84,6 +85,7 @@ public class BackendResource extends ObjectResourceBase{
     @Operation(summary = "create a Backend in the database and add it to the Observatory specified by the 'observatoryId'")
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("obs_administration")
     public Backend createAndAddBackend(@PathParam("observatoryId") Long observatoryId, Backend backend)
             throws WebApplicationException
     {
@@ -126,6 +128,7 @@ public class BackendResource extends ObjectResourceBase{
     @Operation(summary = "update the 'parallel' status (true/false) of the Backend specified by the 'backendId'")
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("obs_administration")
     public Response updateBackendParallel(
             @PathParam("observatoryId") Long observatoryId,
             @PathParam("backendId") Long backendId,

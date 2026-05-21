@@ -1,6 +1,7 @@
 package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.inject.Inject;
 import jakarta.persistence.Query;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
@@ -8,6 +9,7 @@ import org.ivoa.dm.proposal.prop.*;
 import org.jboss.resteasy.reactive.ResponseStatus;
 import org.jboss.resteasy.reactive.RestQuery;
 import org.orph2020.pst.common.json.ObjectIdentifier;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -22,6 +24,8 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed("default-roles-orppst")
 public class ObservationResource extends ObjectResourceBase {
+    @Inject
+    CurrentUserChecks currentUserChecks;
 
     private Observation findObservation(List<Observation> observations, Long id, Long proposalCode)
             throws WebApplicationException
@@ -44,6 +48,7 @@ public class ObservationResource extends ObjectResourceBase {
                                                   @RestQuery ObsType type)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         String select = type == ObsType.CalibrationObservation ?
                 "select o._id,concat(cast(Type(o) as string), ':',o.intents),t.sourceName " :
                 "select o._id,cast(Type(o) as string),t.sourceName ";
@@ -102,6 +107,7 @@ public class ObservationResource extends ObjectResourceBase {
                                       @PathParam("observationId") Long observationId)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         return findChildByQuery(ObservingProposal.class, Observation.class, "observations",
                 proposalCode, observationId);
     }
@@ -121,6 +127,7 @@ public class ObservationResource extends ObjectResourceBase {
     public Observation addNewObservation(@PathParam("proposalCode") Long proposalCode,
                                          Observation observation)
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         for(ObservingConstraint constraint : observation.getConstraints()) {
             if(constraint.getClass() == TimingWindow.class) {
                 CheckTimingWindow((TimingWindow) constraint);
@@ -144,6 +151,7 @@ public class ObservationResource extends ObjectResourceBase {
                                       @PathParam("observationId") Long id)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
         Observation observation =
                 findObservation(observingProposal.getObservations(), id, proposalCode);
@@ -161,6 +169,7 @@ public class ObservationResource extends ObjectResourceBase {
                                   List<Target> targets)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         Observation observation = findChildByQuery(ObservingProposal.class, Observation.class,
                 "observations", proposalCode, observationId);
 
@@ -183,6 +192,7 @@ public class ObservationResource extends ObjectResourceBase {
                                  Field field)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         Observation observation = findChildByQuery(ObservingProposal.class, Observation.class,
                 "observations", proposalCode, observationId);
 
@@ -201,6 +211,7 @@ public class ObservationResource extends ObjectResourceBase {
                                          TechnicalGoal technicalGoal)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
         Observation observation =
                 findObservation(observingProposal.getObservations(), observationId, proposalCode);
@@ -219,6 +230,7 @@ public class ObservationResource extends ObjectResourceBase {
                                              RequestedResources requestedResources)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
         Observation observation =
                 findObservation(observingProposal.getObservations(), observationId, proposalCode);
@@ -237,6 +249,7 @@ public class ObservationResource extends ObjectResourceBase {
                                        List<CalibrationTarget_intendedUse> replacementUse)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         Observation observingProposal = findChildByQuery(ObservingProposal.class, Observation.class,
                 "observations", proposalCode, observationId);
 
@@ -260,6 +273,7 @@ public class ObservationResource extends ObjectResourceBase {
                                            @PathParam("observationId") Long observationId)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         Observation observation = findChildByQuery(ObservingProposal.class, Observation.class,
                 "observations", proposalCode, observationId);
         return observation.getConstraints();
@@ -272,6 +286,7 @@ public class ObservationResource extends ObjectResourceBase {
                                     @PathParam("constraintId") Long constraintId)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(observationId);
         return findChildByQuery(Observation.class, ObservingConstraint.class,
                 "constraints", observationId, constraintId);
     }
@@ -286,7 +301,7 @@ public class ObservationResource extends ObjectResourceBase {
                                                 ObservingConstraint constraint)
             throws WebApplicationException
     {
-
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         if(constraint.getClass() == TimingWindow.class) {
             CheckTimingWindow((TimingWindow) constraint);
          }
@@ -308,6 +323,7 @@ public class ObservationResource extends ObjectResourceBase {
                                      @PathParam("constraintId") Long constraintId)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
         Observation observation =
                 findObservation(observingProposal.getObservations(), observationId, proposalCode);
@@ -336,6 +352,7 @@ public class ObservationResource extends ObjectResourceBase {
     )
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         CheckTimingWindow(replacementWindow);
 
         Observation observation = findChildByQuery(ObservingProposal.class, Observation.class,

@@ -24,6 +24,7 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @Path("observatories")
 @Tag(name = "observatories")
+@RolesAllowed("default-roles-orppst")
 public class ObservatoryResource extends ObjectResourceBase {
 
     @GET

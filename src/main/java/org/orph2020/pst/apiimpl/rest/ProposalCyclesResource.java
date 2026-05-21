@@ -22,6 +22,7 @@ import org.jboss.resteasy.reactive.RestQuery;
 import org.orph2020.pst.common.json.CycleObservingTimeTotal;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 import org.orph2020.pst.common.json.ProposalCycleSynopsis;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -29,7 +30,6 @@ import jakarta.ws.rs.core.MediaType;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Path("proposalCycles")
 @Tag(name="proposalCycles")
@@ -44,42 +44,13 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     JsonWebToken userInfo;
     @Inject
     ProposalDocumentStore proposalDocumentStore;
+    @Inject
+    CurrentUserChecks currentUserChecks;
 
     private static final String notOnTACmsg = "This endpoint is restricted to TAC members only";
 
     public ProposalCyclesResource(Logger logger) {
         this.logger = logger;
-    }
-
-
-    /**
-     * Checks that the current user, i.e. the user making the call, is on the TAC. This is
-     * an additional check over that provided by the "@RolesAllowed" annotation.
-     */
-    public boolean isCurrentUserOnTAC(ProposalCycle cycle)
-            throws WebApplicationException
-    {
-        // Get the current user details.
-        Long personId = subjectMapResource.subjectMap(userInfo.getSubject()).getPerson().getId();
-
-        // An observatory administrator can do _anything_
-        if(userInfo.getClaim("realm_access") != null) {
-            String roleList = userInfo.getClaim("realm_access").toString();
-
-            if(roleList != null && roleList.contains("\"obs_administration\"")) {
-                return true;
-            }
-        }
-
-        AtomicReference<Boolean> amIOnTheTAC = new AtomicReference<>(false);
-
-        // See if user is member of the TAC
-        cycle.getTac().getMembers().forEach(member -> {
-            if(member.getMember().getPerson().getId().equals(personId)) {
-                amIOnTheTAC.set(true);
-            }
-        });
-        return amIOnTheTAC.get();
     }
 
     @GET
@@ -190,13 +161,9 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     )
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
         // Get the TAC for this cycle
         ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
-
-        // See if user is on the TAC
-        if (!isCurrentUserOnTAC(cycle)){
-            throw new WebApplicationException(notOnTACmsg, Response.Status.FORBIDDEN);
-        }
 
         cycle.setTitle(replacementTitle);
 
@@ -227,13 +194,9 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     )
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
         // Get the TAC for this cycle
         ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
-
-        // See if user is on the TAC
-        if (!isCurrentUserOnTAC(cycle)){
-            throw new WebApplicationException(notOnTACmsg, Response.Status.FORBIDDEN);
-        }
 
         cycle.setCode(replacementCode);
 
@@ -267,10 +230,8 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     )
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
         ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
-        if (!isCurrentUserOnTAC(cycle)){
-            throw new WebApplicationException(notOnTACmsg, Response.Status.FORBIDDEN);
-        }
 
         cycle.setTitle(newDetails.title);
         cycle.setCode(newDetails.code);
@@ -296,12 +257,9 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     )
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
+
         ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
-
-        if (!isCurrentUserOnTAC(cycle)){
-            throw new WebApplicationException(notOnTACmsg, Response.Status.FORBIDDEN);
-        }
-
         cycle.setSubmissionDeadline(replacementDeadline);
 
         return responseWrapper(cycle.getSubmissionDeadline(), 200);
@@ -320,12 +278,9 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     )
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
+
         ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
-
-        if (!isCurrentUserOnTAC(cycle)){
-            throw new WebApplicationException(notOnTACmsg, Response.Status.FORBIDDEN);
-        }
-
         cycle.setObservationSessionStart(replacementStart);
 
         return responseWrapper(cycle.getObservationSessionStart(), 200);
@@ -343,12 +298,9 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     )
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
+
         ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
-
-        if (!isCurrentUserOnTAC(cycle)){
-            throw new WebApplicationException(notOnTACmsg, Response.Status.FORBIDDEN);
-        }
-
         cycle.setObservationSessionEnd(replacementEnd);
 
         return responseWrapper(cycle.getObservationSessionEnd(), 200);
@@ -363,6 +315,7 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     @RolesAllowed({"tac_member", "tac_admin"})
     public List<ObjectIdentifier> getCycleAllocationGrades(@PathParam("cycleCode") Long cycleCode)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         Query query = em.createQuery(
                 "Select o._id,o.description,o.name from ProposalCycle p inner join p.possibleGrades o where p._id = "+cycleCode+" Order by o.name"
         );
@@ -377,6 +330,7 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     public AllocationGrade getCycleAllocatedGrade(@PathParam("cycleCode") Long cycleCode,
                                                   @PathParam("gradeId") Long gradeId)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         return findChildByQuery(ProposalCycle.class, AllocationGrade.class,
                 "possibleGrades", cycleCode, gradeId);
     }
@@ -497,11 +451,8 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     public List<CycleObservingTimeTotal>
     getCycleObservingTimeTotals(@PathParam("cycleCode") Long cycleCode)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
-
-        if (!isCurrentUserOnTAC(cycle)){
-            throw new WebApplicationException(notOnTACmsg, Response.Status.FORBIDDEN);
-        }
 
         List<AllocatedProposal> allocatedProposals = cycle.getAllocatedProposals();
 
@@ -541,6 +492,7 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     @Operation(summary="Create and download an excel sheet of all submitted proposals and their review scores")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     public Response ExcelReviews(@PathParam("cycleCode") Long cycleCode) {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             // Get the whole proposal cycle
             ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);

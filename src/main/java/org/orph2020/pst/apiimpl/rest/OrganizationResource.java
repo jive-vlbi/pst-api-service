@@ -17,6 +17,7 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @Path("organizations")
 @Tag(name = "organizations")
+// get and post are part of the registration process, can't require a role there
 public class OrganizationResource extends ObjectResourceBase {
 
     @GET
@@ -47,7 +48,7 @@ public class OrganizationResource extends ObjectResourceBase {
     @DELETE
     @Path("{id}")
     @Operation(summary = "delete the Organization specified by the 'id' from the database")
-    @RolesAllowed("default-roles-orppst")
+    @RolesAllowed("obs_administration")
     @Transactional(rollbackOn = {WebApplicationException.class})
     public Response deleteOrganization(@PathParam("id") Long id)
         throws WebApplicationException
@@ -59,7 +60,7 @@ public class OrganizationResource extends ObjectResourceBase {
     @Path("{id}/name")
     @Consumes(MediaType.TEXT_PLAIN)
     @Operation(summary = "update an Organization's name")
-    @RolesAllowed("default-roles-orppst")
+    @RolesAllowed("obs_administration")
     @Transactional(rollbackOn = {WebApplicationException.class})
     public Response updateOrganisationName(@PathParam("id") Long id, String replacementName)
         throws WebApplicationException
@@ -75,7 +76,7 @@ public class OrganizationResource extends ObjectResourceBase {
     @Path("{id}/address")
     @Consumes(MediaType.TEXT_PLAIN)
     @Operation(summary = "update an Organization's address")
-    @RolesAllowed("default-roles-orppst")
+    @RolesAllowed("obs_administration")
     @Transactional(rollbackOn = {WebApplicationException.class})
     public Response updateOrganisationAddress(@PathParam("id") Long id, String replacementAddress)
             throws WebApplicationException
@@ -91,7 +92,7 @@ public class OrganizationResource extends ObjectResourceBase {
     @Path("{id}/ivoId")
     @Consumes(MediaType.TEXT_PLAIN)
     @Operation(summary = "update an Organization's ivoId")
-    @RolesAllowed("default-roles-orppst")
+    @RolesAllowed("obs_administration")
     @Transactional(rollbackOn = {WebApplicationException.class})
     public Response updateOrganisationIvoId(@PathParam("id") Long id, String replacementIvoId)
             throws WebApplicationException
@@ -107,7 +108,7 @@ public class OrganizationResource extends ObjectResourceBase {
     @Path("{id}/wikiId")
     @Consumes(MediaType.TEXT_PLAIN)
     @Operation(summary = "update an Organization's wikiId")
-    @RolesAllowed("default-roles-orppst")
+    @RolesAllowed("obs_administration")
     @Transactional(rollbackOn = {WebApplicationException.class})
     public Response updateOrganisationWikiId(@PathParam("id") Long id, String replacementWikiId)
             throws WebApplicationException

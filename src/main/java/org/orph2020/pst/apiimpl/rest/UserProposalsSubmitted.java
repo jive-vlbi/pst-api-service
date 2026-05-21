@@ -23,6 +23,7 @@ import org.ivoa.dm.proposal.prop.RelatedProposal;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 import org.orph2020.pst.common.json.SubmittedProposalMailData;
 import org.orph2020.pst.common.json.SubmittedProposalSynopsis;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,6 +43,8 @@ public class UserProposalsSubmitted extends ObjectResourceBase {
     JsonWebToken userInfo;
     @Inject
     ProposalDocumentStore proposalDocumentStore;
+    @Inject
+    CurrentUserChecks currentUserChecks;
 
     @CheckedTemplate
     static class Templates {
@@ -107,22 +110,7 @@ public class UserProposalsSubmitted extends ObjectResourceBase {
                                       @QueryParam("cycleId") long cycleCode)
         throws WebApplicationException
     {
-        Person currentUser = subjectMapResource.subjectMap(userInfo.getSubject()).getPerson();
-        SubmittedProposal submittedProposal = findObject(SubmittedProposal.class, submittedProposalId);
-
-        //Check this person has rights to withdraw this submitted proposal
-        AtomicBoolean foundPI = new AtomicBoolean(false);
-        submittedProposal.getInvestigators().forEach(investigator -> {
-            if(investigator.getType() == InvestigatorKind.PI
-                    && investigator.getPerson() == currentUser)
-                foundPI.set(true);
-        });
-
-        //Authenticated user is not associated with this submittedProposal.
-        if(!foundPI.get()) {
-            throw new WebApplicationException("You are not a PI on this submitted proposal", Response.Status.FORBIDDEN);
-        }
-
+        currentUserChecks.assertCurrentUserIsPi(submittedProposalId);
         Date submissionDeadline = proposalCyclesResource.getProposalCycleDetails(cycleCode).submissionDeadline;
         if (submissionDeadline == null) {
             throw new WebApplicationException("You may not withdraw your proposal from an immediate respone cycle. Please contact the TAC if you want to withdraw",
@@ -134,6 +122,7 @@ public class UserProposalsSubmitted extends ObjectResourceBase {
         }
 
         //Withdraw from observing cycle
+        SubmittedProposal submittedProposal = findObject(SubmittedProposal.class, submittedProposalId);
         ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
         cycle.removeFromSubmittedProposals(submittedProposal);
 

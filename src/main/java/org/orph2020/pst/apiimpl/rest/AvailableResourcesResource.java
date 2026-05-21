@@ -8,7 +8,9 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.management.*;
 import org.orph2020.pst.common.json.ObjectIdentifier;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
+import jakarta.inject.Inject;
 import jakarta.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,10 +21,14 @@ import java.util.List;
 @RolesAllowed({"tac_admin", "tac_member"})
 public class AvailableResourcesResource extends ObjectResourceBase {
 
+    @Inject
+    CurrentUserChecks currentUserChecks;
+
     @GET
     @Operation(summary = "get all the AvailableResources associated with the given ProposalCycle")
     public AvailableResources getCycleAvailableResources(@PathParam("cycleCode") Long cycleCode)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         //available resources is a wrapper class for a List<Resources>
         return findObject(ProposalCycle.class, cycleCode).getAvailableResources();
     }
@@ -34,6 +40,7 @@ public class AvailableResourcesResource extends ObjectResourceBase {
                                               @PathParam("resourceName") String resourceName)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         return AvailableResourceHelper.findAvailableResource(em, cycleCode, resourceName);
     }
 
@@ -44,7 +51,8 @@ public class AvailableResourcesResource extends ObjectResourceBase {
                                         @PathParam("resourceName") String resourceName)
             throws WebApplicationException
     {
-        return  AvailableResourceHelper.findAvailableResource(em, cycleCode, resourceName).getAmount();
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
+        return AvailableResourceHelper.findAvailableResource(em, cycleCode, resourceName).getAmount();
     }
 
     @GET
@@ -54,6 +62,7 @@ public class AvailableResourcesResource extends ObjectResourceBase {
                                        @PathParam("resourceName") String resourceName)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         //check that the resource name exists at as an "AvailableResource" in the given cycle
         AvailableResourceHelper.findAvailableResource(em, cycleCode, resourceName); //this is OK, we're not using the return value
 
@@ -68,6 +77,7 @@ public class AvailableResourcesResource extends ObjectResourceBase {
                                             @PathParam("resourceName") String resourceName)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         // findAvailableResource performs a check on the 'resourceName'
         Double availableResourceAmount = AvailableResourceHelper
                 .findAvailableResource(em, cycleCode, resourceName)
@@ -82,6 +92,7 @@ public class AvailableResourcesResource extends ObjectResourceBase {
     @Operation(summary = "get all the ResourceTypes associated with the given ProposalCycle")
     public List<ObjectIdentifier> getCycleResourceTypes(@PathParam("cycleCode") Long cycleCode)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         List<Resource> resources = findObject(ProposalCycle.class, cycleCode)
                 .getAvailableResources().getResources();
 
@@ -103,6 +114,7 @@ public class AvailableResourcesResource extends ObjectResourceBase {
     public ResourceType getCycleResourceType(@PathParam("cycleCode") long cycleId,
                                              @PathParam("typeId") long typeId)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleId);
         return findObject(ResourceType.class, typeId);
     }
 
@@ -114,6 +126,7 @@ public class AvailableResourcesResource extends ObjectResourceBase {
                                      Resource resource)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
 
         AvailableResources availableResources = proposalCycle.getAvailableResources();
@@ -141,6 +154,7 @@ public class AvailableResourcesResource extends ObjectResourceBase {
     public Response removeCycleResource(@PathParam("cycleCode") Long cycleCode,
                                         @PathParam("resourceId") Long resourceId)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
 
         AvailableResources availableResources = proposalCycle.getAvailableResources();
@@ -165,6 +179,7 @@ public class AvailableResourcesResource extends ObjectResourceBase {
                                               Double newAmount)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
 
         Resource resource = proposalCycle.getAvailableResources().getResources()

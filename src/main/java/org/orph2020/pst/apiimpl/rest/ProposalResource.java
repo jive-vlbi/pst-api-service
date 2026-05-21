@@ -26,6 +26,7 @@ import org.jboss.resteasy.reactive.multipart.FileUpload;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 import org.orph2020.pst.common.json.ProposalCycleSynopsis;
 import org.orph2020.pst.common.json.ProposalSynopsis;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.persistence.Query;
@@ -76,6 +77,8 @@ public class ProposalResource extends ObjectResourceBase {
 //    UserInfo userInfo; // IMPL it would be nice to use UserInfo
     @Inject
     JustificationsResource justificationsResource;
+    @Inject
+    CurrentUserChecks currentUserChecks;
 
     private static final String proposalRoot = "{proposalCode}";
 
@@ -124,7 +127,7 @@ public class ProposalResource extends ObjectResourceBase {
 
     @GET
     @Operation(summary = "get the synopsis for each Proposal in the database, optionally provide an investigator name and/or a proposal title to see specific proposals.  Filters out submitted copies.")
-    //@RolesAllowed("default-roles-orppst")
+    @RolesAllowed("default-roles-orppst")
     public List<ProposalSynopsis> getProposals(@RestQuery String investigatorName, @RestQuery String title) {
 
         boolean noQuery = investigatorName == null && title == null;
@@ -174,6 +177,7 @@ public class ProposalResource extends ObjectResourceBase {
     public ObservingProposal getObservingProposal(@PathParam("proposalCode") Long proposalCode)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         return singleObservingProposal(proposalCode);
     }
 
@@ -182,6 +186,7 @@ public class ProposalResource extends ObjectResourceBase {
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional(rollbackOn = {WebApplicationException.class})
     @ResponseStatus(value = 201)
+    @RolesAllowed("default-roles-orppst")
     public ObservingProposal createObservingProposal(ObservingProposal op)
             throws WebApplicationException {
         ObservingProposal persisted = persistObject(op);
@@ -201,9 +206,11 @@ public class ProposalResource extends ObjectResourceBase {
     @Path(proposalRoot)
     @Operation(summary = "remove the ObservingProposal specified by the 'proposalCode'")
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public Response deleteObservingProposal(@PathParam("proposalCode") long code)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsPi(code);
         //clean up the document store for this proposal
         try {
             proposalDocumentStore.removeStorePath(String.valueOf(code));
@@ -221,9 +228,11 @@ public class ProposalResource extends ObjectResourceBase {
     @Operation(summary = "clone ObservingProposal specified by the 'proposalCode'")
     @Transactional(rollbackOn = {WebApplicationException.class})
     @ResponseStatus(value = 201)
+    @RolesAllowed("default-roles-orppst")
     public ObservingProposal cloneObservingProposal(@PathParam("proposalCode") long code)
           throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(code);
         ObservingProposal prop = findObject(ObservingProposal.class, code);
         prop.forceLoad();
         new ProposalModel().createContext(); //IMPL nasty clone API...
@@ -256,7 +265,9 @@ public class ProposalResource extends ObjectResourceBase {
     @GET
     @Path(proposalRoot + "/title")
     @Operation(summary = "get the title of the ObservingProposal specified by 'proposalCode'")
+    @RolesAllowed("default-roles-orppst")
     public Response getObservingProposalTitle(@PathParam("proposalCode") Long proposalCode) {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal proposal = singleObservingProposal(proposalCode);
         return responseWrapper(proposal.getTitle(), 200);
     }
@@ -265,7 +276,9 @@ public class ProposalResource extends ObjectResourceBase {
     @GET
     @Path(proposalRoot + "/validate")
     @Operation(summary = "validate the proposal, get summary strings of it's state.  Optionally pass a cycle to compare dates with.")
+    @RolesAllowed("default-roles-orppst")
     public ProposalValidation validateObservingProposal(@PathParam("proposalCode") Long proposalCode, @RestQuery long cycleId) {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal proposal = singleObservingProposal(proposalCode);
         boolean valid = true;
         String info = "Your proposal has passed preliminary checks, please now select modes for your observations.";
@@ -341,7 +354,7 @@ public class ProposalResource extends ObjectResourceBase {
     @PUT
     @Operation(summary = "change the title of an ObservingProposal")
     @Consumes(MediaType.TEXT_PLAIN)
-    //@RolesAllowed("default-roles-orppst")
+    @RolesAllowed("default-roles-orppst")
     @Transactional(rollbackOn = {WebApplicationException.class})
     @Path(proposalRoot +"/title")
     public Response replaceTitle(
@@ -349,6 +362,7 @@ public class ProposalResource extends ObjectResourceBase {
             String replacementTitle)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalCode);
         proposal.setTitle(replacementTitle);
 
@@ -361,9 +375,11 @@ public class ProposalResource extends ObjectResourceBase {
     @Path(proposalRoot +"/summary")
     @Consumes(MediaType.TEXT_PLAIN)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public Response replaceSummary(@PathParam("proposalCode") long proposalCode, String replacementSummary)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalCode);
 
         proposal.setSummary(replacementSummary);
@@ -376,7 +392,9 @@ public class ProposalResource extends ObjectResourceBase {
     @GET
     @Path(proposalRoot + "/kind")
     @Operation(summary = "get the 'kind' of ObservingProposal specified by the 'proposalCode")
+    @RolesAllowed("default-roles-orppst")
     public ProposalKind getObservingProposalKind(@PathParam("proposalCode") Long proposalCode) {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal proposal = getObservingProposal(proposalCode);
         return proposal.getKind();
     }
@@ -386,9 +404,11 @@ public class ProposalResource extends ObjectResourceBase {
     @Path(proposalRoot +"/kind")
     @Consumes(MediaType.TEXT_PLAIN)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public Response changeKind(@PathParam("proposalCode") long proposalCode, String kind)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalCode);
 
         try{
@@ -406,10 +426,12 @@ public class ProposalResource extends ObjectResourceBase {
     @Path("{proposalCode}/relatedProposals")
     @Consumes(MediaType.TEXT_PLAIN)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public Response addRelatedProposal(@PathParam("proposalCode") Long proposalCode,
                                        Long relatedProposalCode)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         if (proposalCode.equals(relatedProposalCode)) {
             throw new WebApplicationException(
                     "ObservingProposal cannot refer to itself as a RelatedProposal", 418);
@@ -429,10 +451,12 @@ public class ProposalResource extends ObjectResourceBase {
     @GET
     @Path(targetsRoot)
     @Operation(summary = "get the list of ObjectIdentifiers for the targets associated with the given ObservingProposal, optionally provide a sourceName as a query to get that particular Observation's identifier")
+    @RolesAllowed("default-roles-orppst")
     public List<ObjectIdentifier> getTargets(@PathParam("proposalCode") Long proposalCode,
                                              @RestQuery String sourceName)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         if (sourceName == null) {
             return getObjectIdentifiers("SELECT t._id,t.sourceName FROM ObservingProposal o Inner Join o.targets t WHERE o._id = "+proposalCode+" ORDER BY t.sourceName");
         } else {
@@ -444,10 +468,12 @@ public class ProposalResource extends ObjectResourceBase {
     @GET
     @Path (targetsRoot + "/{targetId}")
     @Operation(summary = "get a specific Target for the given ObservingProposal")
+    @RolesAllowed("default-roles-orppst")
     public Target getTarget(@PathParam("proposalCode") Long proposalCode,
                             @PathParam("targetId") Long targetId)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         return findChildByQuery(ObservingProposal.class, Target.class, "targets",
                 proposalCode, targetId);
     }
@@ -458,8 +484,10 @@ public class ProposalResource extends ObjectResourceBase {
     @Consumes(MediaType.APPLICATION_JSON)
     @ResponseStatus(201)
     @Transactional
+    @RolesAllowed("default-roles-orppst")
     public Target addNewTarget(@PathParam("proposalCode") Long proposalCode, Target target)
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
         return addNewChildObject(observingProposal,target, observingProposal::addToTargets);
     }
@@ -536,11 +564,13 @@ public class ProposalResource extends ObjectResourceBase {
     @Operation(summary = "upload a list of targets contained in a file to this Proposal")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public Response uploadTargetList(@PathParam("proposalCode") Long proposalCode,
                                      @RestForm("document") @Schema(implementation = UploadTargetList.class)
                                      FileUpload fileUpload)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         String extension = checkTargetListUpload(fileUpload);
 
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
@@ -575,9 +605,11 @@ public class ProposalResource extends ObjectResourceBase {
     @Path(targetsRoot+"/{targetId}")
     @Operation(summary = "remove the Target specified by 'id' from the given ObservingProposal")
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public Response removeTarget(@PathParam("proposalCode") Long proposalCode, @PathParam("targetId") Long targetId)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
 
         List<Observation> observations = observingProposal.getObservations();
@@ -602,10 +634,12 @@ public class ProposalResource extends ObjectResourceBase {
     @GET
     @Path(fieldsRoot)
     @Operation(summary = "get the list of ObjectIdentifiers for the Fields associated with the given ObservingProposal, optionally provide a name as a query to get that particular Fields's identifier")
+    @RolesAllowed("default-roles-orppst")
     public List<ObjectIdentifier> getFields(@PathParam("proposalCode") Long proposalCode,
                                             @RestQuery String fieldName)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         if (fieldName == null) {
             return getObjectIdentifiers("SELECT t._id,t.name FROM ObservingProposal o Inner Join o.fields t WHERE o._id = "+proposalCode+" ORDER BY t.name");
         } else {
@@ -617,10 +651,12 @@ public class ProposalResource extends ObjectResourceBase {
     @GET
     @Path(fieldsRoot+"/{fieldId}")
     @Operation(summary = "get the Field specified by the 'fieldId' in the given proposal")
+    @RolesAllowed("default-roles-orppst")
     public Field getField(@PathParam("proposalCode") Long proposalCode,
                           @PathParam("fieldId") Long fieldId)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         return findChildByQuery(ObservingProposal.class, Field.class, "fields",
                 proposalCode, fieldId);
     }
@@ -630,11 +666,13 @@ public class ProposalResource extends ObjectResourceBase {
     @Operation(summary = "change the name of the specified field")
     @Consumes(MediaType.TEXT_PLAIN)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public Response changeFieldName(@PathParam("proposalCode") Long proposalCode,
                                     @PathParam("fieldId") Long fieldId,
                                     String replacementName)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         Field field = findChildByQuery(ObservingProposal.class, Field.class, "fields",
                 proposalCode, fieldId);
 
@@ -650,9 +688,11 @@ public class ProposalResource extends ObjectResourceBase {
     @Consumes(MediaType.APPLICATION_JSON)
     @ResponseStatus(201)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public Field addNewField(@PathParam("proposalCode") Long proposalCode,
                              Field field)
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
         return addNewChildObject(observingProposal, field, observingProposal::addToFields);
     }
@@ -661,9 +701,11 @@ public class ProposalResource extends ObjectResourceBase {
     @Path(fieldsRoot+"/{fieldId}")
     @Operation(summary = "remove the Field specified by 'id' from the given ObservingProposal")
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public Response removeField(@PathParam("proposalCode") Long proposalCode, @PathParam("fieldId") Long fieldId)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
 
         Field field = observingProposal.getFields().stream().filter(o -> fieldId.equals(o.getId())).findAny()
@@ -682,8 +724,10 @@ public class ProposalResource extends ObjectResourceBase {
     @Operation(summary="export a proposal as a file")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     @Path(proposalRoot+"/export")
+    @RolesAllowed("default-roles-orppst")
     public Response exportProposal(@PathParam("proposalCode")Long proposalCode)
             throws WebApplicationException {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal proposalForExport = singleObservingProposal(proposalCode);
 
         return Response
@@ -1027,6 +1071,7 @@ public class ProposalResource extends ObjectResourceBase {
     @RolesAllowed("default-roles-orppst")
     public Response exportProposalZip(@PathParam("proposalCode")Long proposalCode)
             throws WebApplicationException, IOException {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal proposalForExport = singleObservingProposal(proposalCode);
         String filename = "Export."
                 + proposalForExport.getTitle().replaceAll("[\\\\/:*?\"<>|]", "_")
@@ -1047,6 +1092,7 @@ public class ProposalResource extends ObjectResourceBase {
     @Path("/import")
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
     public ObservingProposal importProposal(ObservingProposal importProposal) {
         if(importProposal==null){
             throw new WebApplicationException("No file uploaded",400);

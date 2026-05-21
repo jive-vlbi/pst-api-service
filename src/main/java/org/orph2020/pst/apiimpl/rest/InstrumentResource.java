@@ -24,6 +24,7 @@ import java.util.List;
 @Path("observatories/{observatoryId}/instruments")
 @Tag(name = "observatory-instruments")
 @Produces(MediaType.APPLICATION_JSON)
+@RolesAllowed("default-roles-orppst")
 public class InstrumentResource extends ObjectResourceBase {
 
     private Instrument findInstrumentInList(List<Instrument> instruments, long instrumentId ) {

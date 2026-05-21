@@ -3,6 +3,7 @@ package org.orph2020.pst.apiimpl.rest;
  * Created on 13/04/2023 by Paul Harrison (paul.harrison@manchester.ac.uk).
  */
 
+import jakarta.inject.Inject;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.security.RolesAllowed;
@@ -24,6 +25,7 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.orph2020.pst.apiimpl.entities.SubjectMap;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import jakarta.persistence.TypedQuery;
 import jakarta.ws.rs.*;
@@ -37,7 +39,10 @@ import java.util.stream.Collectors;
 @Path("subjectMap")
 @Tag(name="mapping between AAI user ids and People")
 @Produces(MediaType.APPLICATION_JSON)
+//@RolesAllowed("default-roles-orppst") the login process itself relies on the subjectMap (path /{id}) function
 public class SubjectMapResource extends ObjectResourceBase {
+    @Inject
+    CurrentUserChecks currentUserChecks;
 
     public enum RoleAction {
         ASSIGN,
@@ -82,6 +87,7 @@ public class SubjectMapResource extends ObjectResourceBase {
 
     @GET
     @Operation(summary = "get a list of the SubjectMaps stored in the database, optionally provide a 'uid' to get that specific SubjectMap")
+    @RolesAllowed("obs_administration")
     public List<SubjectMap> subjectMapList(@RestQuery String uid) {
 
         String selectStr = "select o from SubjectMap o";
@@ -105,6 +111,7 @@ public class SubjectMapResource extends ObjectResourceBase {
    @Consumes(MediaType.APPLICATION_JSON)
    @ResponseStatus(value = 201)
     public SubjectMap createFromUser(@QueryParam("uuid") String uuid, Person user){
+        // currentUserChecks.assertCurrentUserHasKeycloakUid(uuid); can't do this as the user creation process is still in progress here. At least the database should protect against duplicates.
       SubjectMap ob = new SubjectMap( user, uuid);
       return persistObject(ob);
     }
@@ -114,6 +121,7 @@ public class SubjectMapResource extends ObjectResourceBase {
     @Operation(summary = "get the SubjectMap specified by the 'id'")
     public SubjectMap subjectMap(@PathParam("id") String id)
     {
+        // currentUserChecks.assertCurrentUserHasKeycloakUid(id); can't do this yet, the login process itself relies on this method
         TypedQuery<SubjectMap> q = em.createQuery("select o from SubjectMap o where o.uid = :uid", SubjectMap.class);
         q.setParameter("uid", id);
         List<SubjectMap> res = q.getResultList();
@@ -128,8 +136,10 @@ public class SubjectMapResource extends ObjectResourceBase {
     @GET
     @Path("{personId}/uid")
     @Operation(summary = "get the keycloak 'uid' related to the 'personId'")
+    @RolesAllowed("default-roles-orppst")
     public Response getSubjectMapUid(@PathParam("personId") Long personId)
     {
+        currentUserChecks.assertCurrentUserIsPerson(personId);
         SubjectMap subjectMap = findSubjectMap(personId);
 
         return responseWrapper(subjectMap.uid,200);
@@ -138,6 +148,7 @@ public class SubjectMapResource extends ObjectResourceBase {
     @GET
     @Path("keycloakUserUIDs")
     @Operation(summary = "get the unique IDs of existing keycloak realm users")
+    @RolesAllowed("obs_administration")
     public List<String> existingUserUIDs()
     {
         List<UserRepresentation> userRepresentations = realmOrppst.users().list();
@@ -152,6 +163,7 @@ public class SubjectMapResource extends ObjectResourceBase {
     @Path("newUsers")
     @Operation(summary = "checks for new users, adds them as a Person if found, returns the number of new users found")
     @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("obs_administration")
     public Integer checkForNewUsers()
             throws WebApplicationException
     {
@@ -201,6 +213,7 @@ public class SubjectMapResource extends ObjectResourceBase {
     public Response changeFirstName(@PathParam("personId") Long personId, String firstName)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsPerson(personId);
         SubjectMap subjectMap = findSubjectMap(personId);
 
         UserRepresentation userRepresentation = realmOrppst.users().get(subjectMap.uid).toRepresentation();
@@ -230,6 +243,7 @@ public class SubjectMapResource extends ObjectResourceBase {
     public Response changeLastName(@PathParam("personId") Long personId, String lastName)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsPerson(personId);
         SubjectMap subjectMap = findSubjectMap(personId);
 
         UserRepresentation userRepresentation = realmOrppst.users().get(subjectMap.uid).toRepresentation();
@@ -259,6 +273,7 @@ public class SubjectMapResource extends ObjectResourceBase {
     public Response changeEmailAddress(@PathParam("personId") Long personId, String emailAddress)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsPerson(personId);
         //check that the incoming email address is unique
 
         String queryStr = "select p.eMail from Person p";
@@ -291,6 +306,7 @@ public class SubjectMapResource extends ObjectResourceBase {
     public Response resetPassword(@PathParam("personId") Long personId, String newPassword)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsPerson(personId);
         // Dev Note: We assume a frontend client has provided a means to check the new password,
         // i.e., that the user hasn't typo-ed the new password via a confirm method.
 

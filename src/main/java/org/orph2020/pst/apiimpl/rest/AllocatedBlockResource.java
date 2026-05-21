@@ -6,11 +6,13 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.inject.Inject;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.management.*;
 import org.ivoa.dm.proposal.management.ObservingMode;
 import org.orph2020.pst.common.json.ObjectIdentifier;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import java.util.List;
 
@@ -19,6 +21,8 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed({"tac_admin", "tac_member"})
 public class AllocatedBlockResource extends ObjectResourceBase{
+    @Inject
+    CurrentUserChecks currentUserChecks;
 
     @GET
     @Operation(summary = "get the allocated resource blocks associated with the given allocated proposal")
@@ -26,6 +30,7 @@ public class AllocatedBlockResource extends ObjectResourceBase{
             @PathParam("cycleCode") Long cycleCode,
             @PathParam("allocatedId") Long allocatedId)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         String qlString = "select b._id,b.resource.type.name,b.grade.name from ProposalCycle c "
                 + "inner join c.allocatedProposals a inner join a.allocation b "
                 + "where c._id=" + cycleCode + " and a._id=" + allocatedId + " "
@@ -43,6 +48,7 @@ public class AllocatedBlockResource extends ObjectResourceBase{
                                             @PathParam("allocatedId") Long allocatedId,
                                             @PathParam("blockId") Long blockId)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         return findChildByQuery(AllocatedProposal.class, AllocatedBlock.class,
                 "allocation", allocatedId, blockId);
     }
@@ -56,6 +62,7 @@ public class AllocatedBlockResource extends ObjectResourceBase{
                                             AllocatedBlock allocatedBlock)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         AllocatedProposal allocatedProposal = findChildByQuery(ProposalCycle.class, AllocatedProposal.class,
                 "allocatedProposals", cycleCode, allocatedId);
 
@@ -97,6 +104,7 @@ public class AllocatedBlockResource extends ObjectResourceBase{
                                          @PathParam("blockId") Long blockId)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         AllocatedProposal allocatedProposal = findChildByQuery(ProposalCycle.class, AllocatedProposal.class,
                 "allocatedProposals", cycleCode, allocatedId);
 
@@ -117,6 +125,7 @@ public class AllocatedBlockResource extends ObjectResourceBase{
                                 Long gradeId)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         AllocatedBlock allocatedBlock = findChildByQuery(AllocatedProposal.class, AllocatedBlock.class,
                 "allocation", allocatedId, blockId);
 
@@ -139,6 +148,7 @@ public class AllocatedBlockResource extends ObjectResourceBase{
                                    Double updateAmount)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         AllocatedBlock allocatedBlock = findChildByQuery(AllocatedProposal.class, AllocatedBlock.class,
                 "allocation", allocatedId, blockId);
 
@@ -181,6 +191,7 @@ public class AllocatedBlockResource extends ObjectResourceBase{
                                         Long observingModeId)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         AllocatedBlock allocatedBlock = findChildByQuery(AllocatedProposal.class, AllocatedBlock.class,
                 "allocation", allocatedId, blockId);
 

@@ -54,7 +54,7 @@ abstract public class ObjectResourceBase {
         return result;
     }
 
-    protected <T> T findObject(Class<T> type, Long id)
+    public <T> T findObject(Class<T> type, Long id)
         throws WebApplicationException
     {
         T object = em.find(type, id);

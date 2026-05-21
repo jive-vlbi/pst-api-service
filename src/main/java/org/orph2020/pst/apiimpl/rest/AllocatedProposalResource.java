@@ -5,12 +5,14 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.inject.Inject;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.management.*;
 import org.jboss.resteasy.reactive.RestQuery;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 import org.orph2020.pst.common.json.ProposalSynopsis;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,12 +22,14 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed({"tac_admin", "tac_member"})
 public class AllocatedProposalResource extends ObjectResourceBase{
+    @Inject
+    CurrentUserChecks currentUserChecks;
 
     @GET
     @Operation(summary = "get identifiers for all the AllocatedProposals in the given ProposalCycle, optionally provide a proposal title to get a specific identifier ")
     public List<ObjectIdentifier> getAllocatedProposals(@PathParam("cycleCode") Long cycleCode,
                                                         @RestQuery String title) {
-
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         String select = "select o._id,o.submitted.title ";
         String from = "from ProposalCycle p ";
         String innerJoins = "inner join p.allocatedProposals o ";
@@ -41,6 +45,7 @@ public class AllocatedProposalResource extends ObjectResourceBase{
     @Operation(summary = "get the Allocated Proposal specified by 'allocationId' in the given cycle")
     public AllocatedProposal getAllocatedProposal(@PathParam("cycleCode") Long cycleCode,
                                                   @PathParam("allocatedId") Long allocatedId) {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         return findChildByQuery(ProposalCycle.class, AllocatedProposal.class,
                 "allocatedProposals", cycleCode, allocatedId);
     }
@@ -54,6 +59,7 @@ public class AllocatedProposalResource extends ObjectResourceBase{
                                                     Long submittedId)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
 
         SubmittedProposal submittedProposal = findChildByQuery(
@@ -120,7 +126,7 @@ public class AllocatedProposalResource extends ObjectResourceBase{
     public Response withdrawAllocatedProposal(@PathParam("cycleCode") Long cycleCode,
                                               @PathParam("allocatedId") Long allocatedId)
     throws WebApplicationException {
-
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
         ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
 
         AllocatedProposal allocatedProposal = findChildByQuery(

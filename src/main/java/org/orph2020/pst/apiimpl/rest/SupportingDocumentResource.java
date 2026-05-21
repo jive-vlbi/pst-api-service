@@ -15,6 +15,7 @@ import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.RestQuery;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 import org.orph2020.pst.common.json.ObjectIdentifier;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -39,6 +40,8 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed("default-roles-orppst")
 public class SupportingDocumentResource extends ObjectResourceBase {
+    @Inject
+    CurrentUserChecks currentUserChecks;
 
     @Inject
     ProposalDocumentStore proposalDocumentStore;
@@ -70,6 +73,7 @@ public class SupportingDocumentResource extends ObjectResourceBase {
                                                          @RestQuery String title)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         if (title == null) {
             return getObjectIdentifiers("SELECT s._id,s.title FROM AbstractProposal o Inner Join o.supportingDocuments s WHERE o._id = "+proposalCode+" ORDER BY s.title");
         } else {
@@ -84,6 +88,7 @@ public class SupportingDocumentResource extends ObjectResourceBase {
                                                     @PathParam("id") Long id)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         return findChildByQuery(ObservingProposal.class, SupportingDocument.class, "supportingDocuments",
                 proposalCode, id);
     }
@@ -103,6 +108,7 @@ public class SupportingDocumentResource extends ObjectResourceBase {
             @RestForm @PartType(MediaType.APPLICATION_JSON) String title)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         if (fileUpload == null) {
             throw new WebApplicationException("No file uploaded", 400);
         }
@@ -193,6 +199,7 @@ public class SupportingDocumentResource extends ObjectResourceBase {
                                              @PathParam("id") Long id)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         //remove the associated document from the document store
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
         SupportingDocument supportingDocument =
@@ -228,6 +235,7 @@ public class SupportingDocumentResource extends ObjectResourceBase {
                                                    String replacementTitle)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalCode);
 
         String _title = sanitiseTitle(replacementTitle, proposal.getSupportingDocuments());
@@ -247,6 +255,7 @@ public class SupportingDocumentResource extends ObjectResourceBase {
     public Response downloadSupportingDocument(@PathParam("proposalCode") Long proposalCode,
                                                @PathParam("id") Long id)
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         SupportingDocument supportingDocument = findChildByQuery(AbstractProposal.class,
                 SupportingDocument.class, "supportingDocuments", proposalCode, id);
 

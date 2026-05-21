@@ -19,6 +19,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.management.*;
 import org.ivoa.dm.proposal.prop.*;
 import org.jboss.resteasy.reactive.RestQuery;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 import org.orph2020.pst.apiimpl.ProposalCodeGenerator;
 import org.orph2020.pst.apiimpl.entities.SubmissionConfiguration;
 import org.orph2020.pst.common.json.ObjectIdentifier;
@@ -30,7 +31,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import io.quarkus.logging.Log;
 
 @Path("proposalCycles/{cycleCode}/submittedProposals")
@@ -57,6 +57,9 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     @Inject
     JustificationsResource justificationsResource;
 
+    @Inject
+    CurrentUserChecks currentUserChecks;
+
     @CheckedTemplate
     static class Templates {
         public static native
@@ -81,7 +84,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
             @RestQuery Long sourceProposalId
     )
     {
-
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         if (sourceProposalId != null) {
             String qlString = getQlString(cycleCode);
             Query query = em.createQuery(qlString);
@@ -130,6 +133,15 @@ public class SubmittedProposalResource extends ObjectResourceBase{
         return baseStr + investigatorLikeStr + titleLikeStr + orderByStr;
     }
 
+    private Long getProposalCycleId(Long submittedProposalId) {
+        TypedQuery<Long> query = em.createQuery(
+            "select s.proposalCycle._id from SubmittedProposal s where s._id = :submittedProposalId",
+            Long.class
+        );
+        query.setParameter("submittedProposalId", submittedProposalId);
+        return query.getSingleResult();
+    }
+
     @GET
     @Path("/{submittedProposalId}")
     @Operation(summary = "get the SubmittedProposal specified by 'submittedProposalId'")
@@ -137,6 +149,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     public SubmittedProposal getSubmittedProposal(@PathParam("cycleCode") Long cycleCode,
                                                 @PathParam("submittedProposalId") Long submittedProposalId)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         return findChildByQuery(ProposalCycle.class, SubmittedProposal.class,
               "submittedProposals", cycleCode, submittedProposalId);
     }
@@ -148,6 +161,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     public List<ObjectIdentifier> getSubmittedNotYetAllocated(@PathParam("cycleCode") Long cycleCode)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
 
         List<SubmittedProposal> submittedProposals = proposalCycle.getSubmittedProposals();
@@ -171,6 +185,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
             @PathParam("personId") Long personId
     )  throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
         List<SubmittedProposal> submittedProposals = proposalCycle.getSubmittedProposals();
         List<AllocatedProposal> allocatedProposals = proposalCycle.getAllocatedProposals();
@@ -214,6 +229,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     public boolean checkAllReviewsLocked(@PathParam("cycleCode") Long cycleCode)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
 
         List<SubmittedProposal> submittedProposals = proposalCycle.getSubmittedProposals();
@@ -232,25 +248,11 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     public Response submitProposal(@PathParam("cycleCode") long cycleId, SubmissionConfiguration submissionConfiguration)
     {
         final long proposalId = submissionConfiguration.proposalId;
+        currentUserChecks.assertCurrentUserIsPi(proposalId);
+
         ProposalCycle cycle =  findObject(ProposalCycle.class,cycleId);
 
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalId);
-
-        //Only a PI can submit this proposal
-        Person currentUser = subjectMapResource.subjectMap(userInfo.getSubject()).getPerson();
-
-        //Check this person has rights to withdraw this submitted proposal
-        AtomicBoolean foundPI = new AtomicBoolean(false);
-        proposal.getInvestigators().forEach(investigator -> {
-            if(investigator.getType() == InvestigatorKind.PI
-                    && investigator.getPerson() == currentUser)
-                foundPI.set(true);
-        });
-
-        //Authenticated user is not associated with this submittedProposal.
-        if(!foundPI.get()) {
-            throw new WebApplicationException("You are not a PI on this proposal", Response.Status.FORBIDDEN);
-        }
 
         List<ObservationConfiguration> configMappings = new ArrayList<>();
         for (SubmissionConfiguration.ObservationConfigMapping cm: submissionConfiguration.config)
@@ -328,7 +330,6 @@ public class SubmittedProposalResource extends ObjectResourceBase{
             );
         }
 
-
         return emptyResponse204();
     }
 
@@ -344,6 +345,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
                                                   Boolean successStatus)
           throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         SubmittedProposal submittedProposal = findChildByQuery(ProposalCycle.class, SubmittedProposal.class,
               "submittedProposals", cycleCode, submittedProposalId);
 
@@ -370,7 +372,9 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     @GET
     @Path("{submittedProposalId}/completeDate")
     @Operation(summary = "get the 'reviewsCompleteDate' of the given submitted proposal")
+    @RolesAllowed({"tac_admin", "tac_member"})
     public Date getReviewsCompleteDate(@PathParam("submittedProposalId") Long submittedProposalId) {
+        currentUserChecks.assertCurrentUserIsTacMember(getProposalCycleId(submittedProposalId));
         SubmittedProposal submittedProposal = findObject(SubmittedProposal.class, submittedProposalId);
         return submittedProposal.getReviewsCompleteDate();
     }
@@ -385,6 +389,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
           @PathParam("submittedProposalId") Long submittedProposalId)
           throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         SubmittedProposal submittedProposal = findChildByQuery(ProposalCycle.class, SubmittedProposal.class,
               "submittedProposals", cycleCode, submittedProposalId);
 
@@ -411,6 +416,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
             @PathParam("submittedProposalId") Long submittedProposalId)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         SubmittedProposal submittedProposal = findChildByQuery(ProposalCycle.class, SubmittedProposal.class,
                 "submittedProposals", cycleCode, submittedProposalId);
 
@@ -428,6 +434,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     public Response downloadAdminZip(@PathParam("submittedProposalId") Long submittedProposalId)
             throws WebApplicationException, IOException {
 
+        currentUserChecks.assertCurrentUserIsTacChair(getProposalCycleId(submittedProposalId));
         SubmittedProposal proposal = findObject(SubmittedProposal.class, submittedProposalId);
 
         String filename = proposal.getProposalCode() + "."
@@ -456,6 +463,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
             @PathParam("submittedProposalId") Long  submittedProposalId
     )
             throws WebApplicationException {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
 
         SubmittedProposal submittedProposal = findChildByQuery(ProposalCycle.class, SubmittedProposal.class,
                 "submittedProposals", cycleCode, submittedProposalId);
@@ -497,6 +505,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
             @QueryParam("proposalCode") String newProposalCode)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         SubmittedProposal submittedProposal = findChildByQuery(ProposalCycle.class, SubmittedProposal.class,
                 "submittedProposals", cycleCode, submittedProposalId);
 

@@ -16,6 +16,7 @@ import org.ivoa.dm.ivoa.StringIdentifier ;
 import org.jboss.resteasy.reactive.RestQuery;
 import org.orph2020.pst.apiimpl.entities.SubjectMap;
 import org.orph2020.pst.common.json.ObjectIdentifier;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -30,12 +31,17 @@ import java.util.stream.Collectors;
 @Path("people")
 @Tag(name = "people")
 @ApplicationScoped
+// post is part of the registration process, can't require a role there
 public class PersonResource extends ObjectResourceBase {
    @Inject
    SubjectMapResource subjectMapResource;
 
+   @Inject
+   CurrentUserChecks currentUserChecks;
+
    @GET
    @Operation(summary = "get People from the database, optionally provide a name to find all the people with that name")
+   @RolesAllowed("default-roles-orppst")
    public List<ObjectIdentifier> getPeople(@RestQuery String name) {
       if(name == null)
          return getObjectIdentifiers("SELECT o._id,o.fullName FROM Person o ORDER BY o.fullName");
@@ -86,6 +92,7 @@ public class PersonResource extends ObjectResourceBase {
    @GET
    @Path("{id}")
    @Operation(summary = "get the specified Person")
+   @RolesAllowed("default-roles-orppst")
    public Person getPerson(@PathParam("id") Long id) {
       return findObject(Person.class, id);
    }
@@ -122,6 +129,7 @@ public class PersonResource extends ObjectResourceBase {
    public Response deletePerson(@PathParam("id") Long id)
            throws WebApplicationException
    {
+      currentUserChecks.assertCurrentUserIsPerson(id);
       // First at least have to remove the SubjectMap entry,
       // any other references to this person may have to be replaced by a placeholder? (TODO)
       SubjectMap subjectMap = subjectMapResource.findSubjectMap(id);
@@ -139,6 +147,7 @@ public class PersonResource extends ObjectResourceBase {
    public Response updateFullName(@PathParam("id") Long personId, String replacementFullName)
       throws WebApplicationException
    {
+      currentUserChecks.assertCurrentUserIsPerson(personId);
       Person person = findObject(Person.class, personId);
 
       person.setFullName(replacementFullName);
@@ -155,6 +164,7 @@ public class PersonResource extends ObjectResourceBase {
    public Response updateEMail(@PathParam("id") Long personId, String replacementEMail)
            throws WebApplicationException
    {
+      currentUserChecks.assertCurrentUserIsPerson(personId);
       Person person = findObject(Person.class, personId);
 
       person.setEMail(replacementEMail);
@@ -171,6 +181,7 @@ public class PersonResource extends ObjectResourceBase {
    public Response updateOrcidId(@PathParam("id") Long personId, String replacementOrcidId)
            throws WebApplicationException
    {
+      currentUserChecks.assertCurrentUserIsPerson(personId);
       Person person = findObject(Person.class, personId);
 
       person.setOrcidId(new StringIdentifier(replacementOrcidId));
@@ -187,6 +198,7 @@ public class PersonResource extends ObjectResourceBase {
    public Response updateHomeInstitute(@PathParam("id") Long personId, Organization replacementHomeInstitute)
       throws WebApplicationException
    {
+      currentUserChecks.assertCurrentUserIsPerson(personId);
       Person person = findObject(Person.class, personId);
 
       person.setHomeInstitute(replacementHomeInstitute);

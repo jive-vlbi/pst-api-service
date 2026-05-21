@@ -13,6 +13,7 @@ import org.ivoa.dm.proposal.management.*;
 import org.ivoa.dm.proposal.prop.Person;
 import org.jboss.resteasy.reactive.RestQuery;
 import org.orph2020.pst.common.json.ObjectIdentifier;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import java.util.List;
 
@@ -21,6 +22,8 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @RolesAllowed({"tac_admin", "tac_member", "obs_administration"})
 public class TACResource extends ObjectResourceBase {
+    @Inject
+    CurrentUserChecks currentUserChecks;
 
     @Inject
     SubjectMapResource subjectMapResource;
@@ -29,6 +32,7 @@ public class TACResource extends ObjectResourceBase {
     @Operation(summary = "get the TAC object for the given proposal cycle")
     public TAC getTAC(@PathParam("cycleCode") Long cycleCode)
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         return findObject(ProposalCycle.class, cycleCode).getTac();
     }
 
@@ -40,7 +44,7 @@ public class TACResource extends ObjectResourceBase {
                                                       @RestQuery String personName,
                                                       @RestQuery TacRole memberRole)
     {
-
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         String nameLike = (personName == null) ? "" :
                 "and m.member.person.fullName = :pName ";
 
@@ -68,6 +72,7 @@ public class TACResource extends ObjectResourceBase {
                                               @PathParam("memberId") Long memberId)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
 
         return proposalCycle.getTac().getMembers()
@@ -88,6 +93,7 @@ public class TACResource extends ObjectResourceBase {
                                               Person newMember)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
         //All TAC members are Reviewers, but not all Reviewers are TAC members
 
         //we enforce a one-to-one relationship between Person and Reviewer
@@ -144,6 +150,7 @@ public class TACResource extends ObjectResourceBase {
                                           @PathParam("memberId") Long memberId)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
         //remove the person as a CommitteeMember only, they remain as a Reviewer.
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
 
@@ -200,6 +207,7 @@ public class TACResource extends ObjectResourceBase {
                                        TacRole replacementRole)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
         ProposalCycle proposalCycle = findObject(ProposalCycle.class, cycleCode);
 
         TAC tac = proposalCycle.getTac();

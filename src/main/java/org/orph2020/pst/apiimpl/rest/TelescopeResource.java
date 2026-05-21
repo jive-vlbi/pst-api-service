@@ -23,6 +23,7 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @Path("observatories/{observatoryId}/telescopes")
 @Tag(name = "observatory-telescopes")
+@RolesAllowed("default-roles-orppst")
 public class TelescopeResource extends ObjectResourceBase{
 
     private Telescope findTelescopeInList(List<Telescope> telescopes, long telescopeId) {

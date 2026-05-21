@@ -1,5 +1,6 @@
 package org.orph2020.pst.apiimpl.rest;
 
+import jakarta.inject.Inject;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -10,6 +11,7 @@ import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.prop.*;
 import org.jboss.resteasy.reactive.ResponseStatus;
 import org.orph2020.pst.common.json.ObjectIdentifier;
+import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
 import java.util.List;
 
@@ -19,6 +21,9 @@ import java.util.List;
 @RolesAllowed("default-roles-orppst")
 public class TechnicalGoalResource extends ObjectResourceBase{
 
+    @Inject
+    CurrentUserChecks currentUserChecks;
+
     // technicalGoals
     //if we were following the design pattern we should return a list of TechnicalGoal identifiers
     // - problem is there is no natural name so cast id to string
@@ -26,6 +31,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
     @Operation(summary = "get the list of TechnicalGoals associated with the given ObservingProposal")
     public List<ObjectIdentifier> getTechnicalGoals(@PathParam("proposalCode") Long proposalCode)
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         return getObjectIdentifiers("SELECT t._id,cast(t._id as string) FROM ObservingProposal o Inner Join o.technicalGoals t WHERE o._id = "+proposalCode);
     }
 
@@ -35,6 +41,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
     public TechnicalGoal getTechnicalGoal(@PathParam("proposalCode") Long proposalCode,
                                           @PathParam("technicalGoalId") Long techGoalId)
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         return findChildByQuery(ObservingProposal.class, TechnicalGoal.class, "technicalGoals",
                 proposalCode, techGoalId);
     }
@@ -48,6 +55,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
                                              TechnicalGoal technicalGoal)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
 
         //use copy constructor in case the front-end is attempting to clone the technical goal,
@@ -65,6 +73,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
                                         @PathParam("technicalGoalId") Long technicalGoalId)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
 
         //we've just found the ObservingProposal so may as well use it to find the TechnicalGoal
@@ -93,6 +102,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
                                                       PerformanceParameters replacementParameters)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         TechnicalGoal currentGoal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
                 "technicalGoals", proposalCode, technicalGoalId);
 
@@ -113,6 +123,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
                                              ScienceSpectralWindow spectralWindow)
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
                 "technicalGoals", proposalCode, technicalGoalId);
 
@@ -128,6 +139,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
                                    @PathParam("spectralWindowId") Long spectralWindowId)
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
                 "technicalGoals", proposalCode, technicalGoalId);
 
@@ -151,6 +163,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
     )
             throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
                 "technicalGoals", proposalCode, technicalGoalId);
 
@@ -178,6 +191,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
     )
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
                 "technicalGoals", proposalCode, technicalGoalId);
 
@@ -200,6 +214,7 @@ public class TechnicalGoalResource extends ObjectResourceBase{
     )
         throws WebApplicationException
     {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
                 "technicalGoals", proposalCode, technicalGoalId);
 
