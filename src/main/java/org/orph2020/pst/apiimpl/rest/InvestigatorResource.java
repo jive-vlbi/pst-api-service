@@ -161,4 +161,23 @@ public class InvestigatorResource extends ObjectResourceBase {
 
         return responseWrapper(investigator, 201);
     }
+
+    @PUT
+    @Path("/{investigatorId}/contactAuthor/{replacementContactAuthor}")
+    @Operation(summary = "change the 'contactAuthor' status of the Investigator specified by the 'id'")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    public Response changeInvestigatorContactAuthor(@PathParam("proposalCode") Long proposalCode,
+                                                    @PathParam("investigatorId") Long id,
+                                                    // using a PathParam for this bool to work around a bug in the code generator that doesn't send a body when the content is 'falsy'
+                                                    // we're using 2.0.2 of openapi-codegen, should at some point try to upgrade this and other versions
+                                                    @PathParam("replacementContactAuthor") Boolean replacementContactAuthor)
+            throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsPi(proposalCode);
+        Investigator investigator = findInvestigatorByQuery(proposalCode, id);
+        investigator.setIsContactAuthor(replacementContactAuthor);
+
+        return responseWrapper(investigator, 201);
+    }
 }
