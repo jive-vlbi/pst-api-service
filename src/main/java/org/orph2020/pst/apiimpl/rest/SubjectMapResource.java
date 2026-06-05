@@ -205,121 +205,20 @@ public class SubjectMapResource extends ObjectResourceBase {
     }
 
     @PUT
-    @Path("{personId}/firstName")
-    @Operation(summary = "change the given person's first name")
-    @Consumes(MediaType.TEXT_PLAIN)
-    @RolesAllowed("default-roles-orppst")
+    @Path("{uid}/refreshFromKeycloak")
+    @Operation(summary = "reload a Person's profile (email and name) from Keycloak")
     @Transactional(rollbackOn = {WebApplicationException.class})
-    public Response changeFirstName(@PathParam("personId") Long personId, String firstName)
-            throws WebApplicationException
+    public Response refreshFromKeycloak(@PathParam("uid") String uid)
     {
-        currentUserChecks.assertCurrentUserIsPerson(personId);
-        SubjectMap subjectMap = findSubjectMap(personId);
-
-        UserRepresentation userRepresentation = realmOrppst.users().get(subjectMap.uid).toRepresentation();
-        userRepresentation.setFirstName(firstName);
-
-        realmOrppst.users().get(subjectMap.uid).update(userRepresentation);
-
-        Person person = findObject(Person.class, personId);
-
-        String currentFullName = person.getFullName();
-
-        String currentFirstName = currentFullName.substring(0, currentFullName.indexOf(" "));
-
-        String newFullName = currentFullName.replaceFirst(currentFirstName, firstName);
-
-        person.setFullName(newFullName);
-
-        return responseWrapper(person, 200);
-    }
-
-    @PUT
-    @Path("{personId}/lastName")
-    @Operation(summary = "change the given subject's last name")
-    @Consumes(MediaType.TEXT_PLAIN)
-    @RolesAllowed("default-roles-orppst")
-    @Transactional(rollbackOn = {WebApplicationException.class})
-    public Response changeLastName(@PathParam("personId") Long personId, String lastName)
-            throws WebApplicationException
-    {
-        currentUserChecks.assertCurrentUserIsPerson(personId);
-        SubjectMap subjectMap = findSubjectMap(personId);
-
-        UserRepresentation userRepresentation = realmOrppst.users().get(subjectMap.uid).toRepresentation();
-        userRepresentation.setLastName(lastName);
-
-        realmOrppst.users().get(subjectMap.uid).update(userRepresentation);
-
-        Person person = findObject(Person.class, personId);
-
-        String currentFullName = person.getFullName();
-
-        String currentFirstName = currentFullName.substring(0, currentFullName.indexOf(" "));
-
-        String newFullName = currentFirstName + " " + lastName;
-
-        person.setFullName(newFullName);
-
-        return responseWrapper(person, 200);
-    }
-
-    @PUT
-    @Path("{personId}/email")
-    @Operation(summary = "change the given subject's email address")
-    @Consumes(MediaType.TEXT_PLAIN)
-    @RolesAllowed("default-roles-orppst")
-    @Transactional(rollbackOn = {WebApplicationException.class})
-    public Response changeEmailAddress(@PathParam("personId") Long personId, String emailAddress)
-            throws WebApplicationException
-    {
-        currentUserChecks.assertCurrentUserIsPerson(personId);
-        //check that the incoming email address is unique
-
-        String queryStr = "select p.eMail from Person p";
-
-        List<String> emails = em.createQuery(queryStr, String.class).getResultList();
-
-        if (emails.contains(emailAddress)) {
-            throw new WebApplicationException(String.format("email: '%s' already in use", emailAddress ), 400);
+        TypedQuery<Person> q = em.createQuery("select p from SubjectMap sm join sm.person p where sm.uid = :uid", Person.class);
+        q.setParameter("uid", uid);
+        List<Person> res = q.getResultList();
+        if (!res.isEmpty()){
+            Person person = res.get(0);
+            UserRepresentation userRepresentation = realmOrppst.users().get(uid).toRepresentation();
+            person.setEMail(userRepresentation.getEmail());
+            person.setFullName(userRepresentation.getFirstName() + " " + userRepresentation.getLastName());
         }
-
-        SubjectMap subjectMap = findSubjectMap(personId);
-
-        UserRepresentation userRepresentation = realmOrppst.users().get(subjectMap.uid).toRepresentation();
-        userRepresentation.setEmail(emailAddress);
-
-        realmOrppst.users().get(subjectMap.uid).update(userRepresentation);
-
-        Person person = findObject(Person.class, personId);
-
-        person.setEMail(emailAddress);
-
-        return responseWrapper(person, 200);
-    }
-
-    @PUT
-    @Path("{personId}/password")
-    @Operation(summary = "reset the given subject's password")
-    @RolesAllowed("default-roles-orppst")
-    @Consumes(MediaType.TEXT_PLAIN)
-    public Response resetPassword(@PathParam("personId") Long personId, String newPassword)
-            throws WebApplicationException
-    {
-        currentUserChecks.assertCurrentUserIsPerson(personId);
-        // Dev Note: We assume a frontend client has provided a means to check the new password,
-        // i.e., that the user hasn't typo-ed the new password via a confirm method.
-
-        SubjectMap subjectMap = findSubjectMap(personId);
-
-        CredentialRepresentation credentialRepresentation = new CredentialRepresentation();
-        credentialRepresentation.setType("password");
-        credentialRepresentation.setValue(newPassword);
-        credentialRepresentation.setTemporary(false); //just to be explicit
-
-        // change the password in the keycloak realm
-        realmOrppst.users().get(subjectMap.uid).resetPassword(credentialRepresentation);
-
         return emptyResponse204();
     }
 
