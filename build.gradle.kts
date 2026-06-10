@@ -34,8 +34,8 @@ dependencies {
 
     implementation("commons-io:commons-io:2.15.1")
 
-    implementation("org.apache.poi:poi:5.2.5")
-    implementation("org.apache.poi:poi-ooxml:5.2.5")
+    implementation("io.quarkiverse.poi:quarkus-poi:1.0.6") // using quarkiverse instead of apache, as apache's version of poi doesn't work with native compilation according to https://github.com/oracle/graal/issues/10043
+//    implementation("io.quarkiverse.poi:quarkus-poi-ooxml:2.2.1")
 }
 
 
