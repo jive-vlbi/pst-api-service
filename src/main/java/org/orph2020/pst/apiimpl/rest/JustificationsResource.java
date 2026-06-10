@@ -141,6 +141,81 @@ public class JustificationsResource extends ObjectResourceBase {
         );
     }
 
+    @GET
+    @Path("extra/{which}")
+    @Operation(summary = "get the eMerlin, eVlbi or triggered extra justification associated with the ObservingProposal specified by 'proposalCode'")
+    public ExtraRequirementJustification getExtraJustification(@PathParam("proposalCode") Long proposalCode,
+                                                               @PathParam("which") String which)
+            throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+        ExtraRequirementJustification justification = getWhichExtraJustification(proposalCode, which);
+        return Objects.requireNonNullElseGet(justification,
+                () -> new ExtraRequirementJustification(false, ""));
+    }
+
+    @PUT
+    @Operation(summary = "update the eMerlin, eVlbi or triggered extra justification associated with the ObservingProposal specified by 'proposalCode'")
+    @Path("extra/{which}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional(rollbackOn={WebApplicationException.class})
+    public ExtraRequirementJustification updateExtraJustification(
+            @PathParam("proposalCode") Long proposalCode,
+            @PathParam("which") String which,
+            ExtraRequirementJustification incoming
+    )
+            throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+        ExtraRequirementJustification justification = getWhichExtraJustification(proposalCode, which);
+
+        if (justification == null) {
+            throw new WebApplicationException(
+                    which + " extra justification does not exist, please add one instead", 404
+            );
+        }
+
+        justification.updateUsing(incoming);
+        em.merge(justification);
+
+        return justification;
+    }
+
+    @POST
+    @Operation(summary = "add an eMerlin, eVlbi or triggered extra justification to the ObservingProposal specified by the 'proposalCode'")
+    @Path("extra/{which}")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional(rollbackOn={WebApplicationException.class})
+    public ExtraRequirementJustification addExtraJustification(
+            @PathParam("proposalCode") Long proposalCode,
+            @PathParam("which") String which,
+            ExtraRequirementJustification incoming )
+            throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+        AbstractProposal proposal = findObject(AbstractProposal.class, proposalCode);
+        ExtraRequirementJustification justification = getWhichExtraJustification(proposalCode, which);
+
+        if (justification != null) {
+            throw new WebApplicationException(
+                    String.format(
+                            "Proposal has an existing %s extra justification, please use the 'update' method instead",
+                            which
+                    )
+            );
+        }
+
+        return switch (which) {
+            case "eMerlin" -> addNewChildObject(proposal, incoming, proposal::setEMerlin);
+            case "eVlbi" -> addNewChildObject(proposal, incoming, proposal::setEVlbi);
+            case "triggered" -> addNewChildObject(proposal, incoming, proposal::setTriggered);
+            default -> throw new WebApplicationException(
+                    String.format("Extra justifications are either 'eMerlin', 'eVlbi' or 'triggered', I got '%s'", which),
+                    400
+            );
+        };
+    }
+
 
     //*********** LATEX and RST Justifications ************
 
@@ -436,6 +511,19 @@ public class JustificationsResource extends ObjectResourceBase {
             case "scientific" -> observingProposal.getScientificJustification();
             default -> throw new WebApplicationException(
                     String.format("Justifications are either 'technical' or 'scientific', I got '%s'", which),
+                    400
+            );
+        };
+    }
+
+    private ExtraRequirementJustification getWhichExtraJustification(Long proposalCode, String which) {
+        AbstractProposal observingProposal = findObject(AbstractProposal.class, proposalCode);
+        return switch (which) {
+            case "eMerlin" -> observingProposal.getEMerlin();
+            case "eVlbi" -> observingProposal.getEVlbi();
+            case "triggered" -> observingProposal.getTriggered();
+            default -> throw new WebApplicationException(
+                    String.format("Extra justifications are either 'eMerlin', 'eVlbi' or 'triggered', I got '%s'", which),
                     400
             );
         };
