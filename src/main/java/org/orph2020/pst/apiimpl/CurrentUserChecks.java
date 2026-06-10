@@ -73,6 +73,14 @@ public class CurrentUserChecks {
             return;
         }
         AbstractProposal proposal = findProposal(proposalId);
+
+        // the contact author will have all the privileges of the PI
+        Person currentUser = subjectMapResource.subjectMap(userInfo.getSubject()).getPerson();
+        List<Investigator> investigators = proposal.getInvestigators();
+        if (investigators.stream().anyMatch(investigator -> investigator.getPerson() == currentUser && investigator.getIsContactAuthor())) {
+            return;
+        }
+
         if (!currentUserHasRoleOnProposal(proposal, Set.of(InvestigatorKind.PI))) {
             throw new WebApplicationException("You are not the PI on this proposal", Response.Status.FORBIDDEN);
         }
