@@ -381,5 +381,34 @@ public class ObservationResource extends ObjectResourceBase {
         return window;
     }
 
+    @PUT
+    @Path("/{observationId}/monitoring")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Operation(summary = "replaces the monitoring for the given observation")
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    public Monitoring replaceMonitoring(
+            @PathParam("proposalCode") Long proposalCode,
+            @PathParam("observationId") Long observationId,
+            Monitoring replacementMonitoring
+    )
+        throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+
+        Observation observation = findChildByQuery(ObservingProposal.class, Observation.class,
+                "observations", proposalCode, observationId);
+
+        Monitoring monitoring = observation.getMonitoring();
+        if (monitoring == null) {
+            monitoring = new Monitoring();
+            observation.setMonitoring(monitoring);
+        }
+
+        monitoring.updateUsing(replacementMonitoring);
+
+        em.merge(monitoring);
+
+        return monitoring;
+    }
 
 }
