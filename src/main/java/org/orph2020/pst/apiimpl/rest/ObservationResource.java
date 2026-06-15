@@ -39,7 +39,8 @@ public class ObservationResource extends ObjectResourceBase {
 
     enum ObsType {
         TargetObservation,
-        CalibrationObservation
+        CalibrationObservation,
+        VlbiObservation
     }
     @GET
     @Operation(summary = "get the list of ObjectIdentifiers for the Observations associated with the given ObservingProposal, optionally provide a srcName as a query to get that particular Observation's identifier")
@@ -92,6 +93,8 @@ public class ObservationResource extends ObjectResourceBase {
                     oi.code = "Target";
                 } else if (oi.code.contains("CalibrationObservation")) {
                     oi.code = "Calibration";
+                } else if (oi.code.contains("VlbiObservation")) {
+                    oi.code = "VLBI";
                 }
                 //else nothing - 'code' remains as is from the query
             }
@@ -262,6 +265,56 @@ public class ObservationResource extends ObjectResourceBase {
         }
 
         return responseWrapper(observingProposal, 201);
+    }
+
+    @PUT
+    @Path("{observationId}/phaseReference")
+    @Operation(summary = "replace the phase reference sources of the given VlbiObservation")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    public Response replacePhaseReference(@PathParam("proposalCode") Long proposalCode,
+                                          @PathParam("observationId") Long observationId,
+                                          List<Target> phaseReference)
+        throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+        Observation observation = findChildByQuery(ObservingProposal.class, Observation.class,
+                "observations", proposalCode, observationId);
+
+        if (observation instanceof VlbiObservation) {
+            ((VlbiObservation) observation).setPhaseReference(phaseReference);
+        } else {
+            throw new WebApplicationException(
+                    String.format("Observation with id %d is NOT a VlbiObservation", observationId)
+            );
+        }
+
+        return responseWrapper(observation, 201);
+    }
+
+    @PUT
+    @Path("{observationId}/checkSource")
+    @Operation(summary = "replace the check sources of the given VlbiObservation")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    public Response replaceCheckSource(@PathParam("proposalCode") Long proposalCode,
+                                       @PathParam("observationId") Long observationId,
+                                       List<Target> checkSource)
+        throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+        Observation observation = findChildByQuery(ObservingProposal.class, Observation.class,
+                "observations", proposalCode, observationId);
+
+        if (observation instanceof VlbiObservation) {
+            ((VlbiObservation) observation).setCheckSource(checkSource);
+        } else {
+            throw new WebApplicationException(
+                    String.format("Observation with id %d is NOT a VlbiObservation", observationId)
+            );
+        }
+
+        return responseWrapper(observation, 201);
     }
 
 
