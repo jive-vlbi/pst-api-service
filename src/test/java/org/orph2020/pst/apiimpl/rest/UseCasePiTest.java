@@ -138,7 +138,7 @@ public class UseCasePiTest {
                                 TextFormats.ASCIIDOC));
 
         prop.setInvestigators(List.of(
-                new Investigator(principalInvestigator, InvestigatorKind.PI, false)));
+                new Investigator(principalInvestigator, InvestigatorKind.PI, false, true)));
 
         String propjson = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(prop);
 
@@ -182,7 +182,7 @@ public class UseCasePiTest {
 
         //create a new Investigator
         Investigator coiInvestigator =
-                new Investigator(coiPerson, InvestigatorKind.COI, true);
+                new Investigator(coiPerson, InvestigatorKind.COI, true, false);
 
         //convert to a JSON string
         String jsonCoiInvestigator =
