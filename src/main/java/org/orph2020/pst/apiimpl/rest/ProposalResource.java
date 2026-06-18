@@ -615,7 +615,7 @@ public class ProposalResource extends ObjectResourceBase {
         List<Observation> observations = observingProposal.getObservations();
 
         for (Observation o : observations) {
-           if( o.getTarget().stream().anyMatch(t -> targetId.equals(t.getId())))
+           if( o.getTarget().getId().equals(targetId))
                 throw new BadRequestException(
                         "Target cannot be deleted as it is currently referred to by at least one Observation");
             
@@ -990,7 +990,7 @@ public class ProposalResource extends ObjectResourceBase {
         for(Observation observation : observations) {
             proposalObservations.append(beginRow)
                     .append(observation.getTechnicalGoal().getId()).append(tableDelim)
-                    .append(targetNamesTable(observation.getTarget())).append(tableDelim)
+                    .append(targetNamesTable(Arrays.asList(observation.getTarget()))).append(tableDelim)
                     .append(timingWindowsTable(observation.getConstraints())).append(endRow);
         }
         proposalObservations.append(endTable);

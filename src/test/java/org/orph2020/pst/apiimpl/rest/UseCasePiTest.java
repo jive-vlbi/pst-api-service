@@ -435,7 +435,7 @@ public class UseCasePiTest {
         //create a target observation
         TargetObservation targetObservation =
         TargetObservation.createTargetObservation((t) -> {
-            t.target = List.of(createdTarget);
+            t.target = createdTarget;
             t.field = createdField;
             t.technicalGoal = createdTechGoal;
         });
