@@ -893,27 +893,6 @@ public class ProposalResource extends ObjectResourceBase {
         return proposalInvestigators.toString();
     }
 
-    private String spectralWindowTable(List<ScienceSpectralWindow> windows) {
-        if(windows.isEmpty()) {
-            return "Not set";
-        }
-        StringBuilder spectralTable = new StringBuilder(startTable);
-        spectralTable.append(beginHead)
-                .append("Start").append(headDelim)
-                .append("End").append(headDelim)
-                .append("Resolution").append(endHead);
-        for(ScienceSpectralWindow window : windows) {
-            spectralTable.append(beginRow)
-                    .append(quantityString(window.getSpectralWindowSetup().getStart())).append(tableDelim)
-                    .append(quantityString(window.getSpectralWindowSetup().getEnd())).append(tableDelim)
-                    .append(quantityString(window.getSpectralWindowSetup().getSpectralResolution())).append(endRow);
-        }
-        spectralTable.append(endTable);
-        return spectralTable.toString();
-    }
-
-
-
     private String technicalGoalsTable(List<TechnicalGoal> technicalGoals) {
         StringBuilder proposalTechnicalGoals = new StringBuilder(startTable);
         proposalTechnicalGoals.append(htmlHeader("Technical Goals"));
@@ -933,8 +912,6 @@ public class ProposalResource extends ObjectResourceBase {
                     .append(quantityString(technicalGoal.getPerformance().getDesiredSensitivity()))
                     .append(tableDelim)
                     .append(quantityString(technicalGoal.getPerformance().getDesiredDynamicRange()))
-                    .append(tableDelim)
-                    .append(spectralWindowTable(technicalGoal.getSpectrum()))
                     .append(endRow);
         }
         proposalTechnicalGoals.append(endTable);

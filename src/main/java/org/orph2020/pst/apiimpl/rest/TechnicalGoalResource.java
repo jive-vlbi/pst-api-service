@@ -2,6 +2,7 @@ package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.inject.Inject;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -111,55 +112,59 @@ public class TechnicalGoalResource extends ObjectResourceBase{
         return currentGoal.getPerformance();
     }
 
-    //TechnicalGoal::Spectrum (List<ScienceSpectralWindow>)
+    //TechnicalGoal::EVNSpectralLine(List<EVNSpectralLine>)
 
     @POST
-    @Path("{technicalGoalId}/spectrum")
-    @Operation(summary = "add a new spectral window to the TechnicalGoal referred to by the 'technicalGoalId'")
+    @Path("{technicalGoalId}/spectralLine")
+    @Operation(summary = "add a new spectral line to the TechnicalGoal referred to by the 'technicalGoalId'")
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional(rollbackOn = {WebApplicationException.class})
-    public ScienceSpectralWindow addSpectrum(@PathParam("proposalCode") Long proposalCode,
-                                             @PathParam("technicalGoalId") Long technicalGoalId,
-                                             ScienceSpectralWindow spectralWindow)
+    public EVNSpectralLine addSpectralLine(@PathParam("proposalCode") Long proposalCode,
+                                           @PathParam("technicalGoalId") Long technicalGoalId,
+                                           EVNSpectralLine spectralLine)
         throws WebApplicationException
     {
         currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
-                "technicalGoals", proposalCode, technicalGoalId);
+                                              "technicalGoals", proposalCode, technicalGoalId);
+        // apparently need to manually lock when adding or removing rows with an _ORDER column
+        em.lock(goal, LockModeType.PESSIMISTIC_WRITE);
 
-        return addNewChildObject(goal, spectralWindow, goal::addToSpectrum);
+        return addNewChildObject(goal, spectralLine, goal::addToSpectralLine);
     }
 
     @DELETE
-    @Path("{technicalGoalId}/spectrum/{spectralWindowId}/")
-    @Operation(summary = "remove the ScienceSpectralWindow with 'spectralWindowId' from the given TechnicalGoal")
+    @Path("{technicalGoalId}/spectralLine/{spectralLineId}/")
+    @Operation(summary = "remove the SpectralLine with 'spectralLineId' from the given TechnicalGoal")
     @Transactional(rollbackOn = {WebApplicationException.class})
-    public Response removeSpectrum(@PathParam("proposalCode") Long proposalCode,
-                                   @PathParam("technicalGoalId") Long technicalGoalId,
-                                   @PathParam("spectralWindowId") Long spectralWindowId)
+    public Response removeSpectralLine(@PathParam("proposalCode") Long proposalCode,
+                                       @PathParam("technicalGoalId") Long technicalGoalId,
+                                       @PathParam("spectralLineId") Long spectralLineId)
             throws WebApplicationException
     {
         currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
                 "technicalGoals", proposalCode, technicalGoalId);
+        // apparently need to manually lock when adding or removing rows with an _ORDER column
+        em.lock(goal, LockModeType.PESSIMISTIC_WRITE);
 
-        ScienceSpectralWindow spectralWindow =
-                findChildByQuery(TechnicalGoal.class, ScienceSpectralWindow.class,
-                        "spectrum", technicalGoalId, spectralWindowId);
+        EVNSpectralLine spectralLine =
+                findChildByQuery(TechnicalGoal.class, EVNSpectralLine.class,
+                        "spectralLine", technicalGoalId, spectralLineId);
 
-        return deleteChildObject(goal, spectralWindow, goal::removeFromSpectrum);
+        return deleteChildObject(goal, spectralLine, goal::removeFromSpectralLine);
     }
 
     @PUT
-    @Path("{technicalGoalId}/spectrum/{spectralWindowId}/")
-    @Operation(summary = "replace the ScienceSpectralWindow with 'spectralWindowId' in the given TechnicalGoal")
+    @Path("{technicalGoalId}/spectalLine/{spectralLineId}/")
+    @Operation(summary = "replace the EVNSpectralLine with 'spectralLineId' in the given TechnicalGoal")
     @Consumes(MediaType.APPLICATION_JSON)
     @Transactional(rollbackOn = {WebApplicationException.class})
-    public ScienceSpectralWindow replaceSpectrum(
+    public EVNSpectralLine replaceSpectralLine(
             @PathParam("proposalCode") Long proposalCode,
             @PathParam("technicalGoalId") Long technicalGoalId,
-            @PathParam("spectralWindowId") Long spectralWindowId,
-            ScienceSpectralWindow replacementWindow
+            @PathParam("spectralLineId") Long spectralLineId,
+            EVNSpectralLine replacementLine
     )
             throws WebApplicationException
     {
@@ -167,65 +172,13 @@ public class TechnicalGoalResource extends ObjectResourceBase{
         TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
                 "technicalGoals", proposalCode, technicalGoalId);
 
-        ScienceSpectralWindow spectralWindow =
-                findChildByQuery(TechnicalGoal.class, ScienceSpectralWindow.class,
-                        "spectrum", technicalGoalId, spectralWindowId);
+        EVNSpectralLine spectralLine =
+                findChildByQuery(TechnicalGoal.class, EVNSpectralLine.class,
+                                 "spectralLine", technicalGoalId, spectralLineId);
 
-        spectralWindow.updateUsing(replacementWindow);
+        spectralLine.updateUsing(replacementLine);
 
-        return spectralWindow;
+        return spectralLine;
     }
 
-    //ExpectedSpectralLines
-
-    @POST
-    @Path("{technicalGoalId}/spectrum/{spectralWindowId}/expectedSpectralLine")
-    @Operation(summary = "add an expected spectral line to the spectral window with 'spectralWindowId' for the given TechnicalGoal")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Transactional(rollbackOn = {WebApplicationException.class})
-    public ExpectedSpectralLine addExpectedSpectralLine(
-            @PathParam("proposalCode") Long proposalCode,
-            @PathParam("technicalGoalId") Long technicalGoalId,
-            @PathParam("spectralWindowId") Long spectralWindowId,
-            ExpectedSpectralLine spectralLine
-    )
-        throws WebApplicationException
-    {
-        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
-        TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
-                "technicalGoals", proposalCode, technicalGoalId);
-
-        ScienceSpectralWindow spectralWindow =
-                findChildByQuery(TechnicalGoal.class, ScienceSpectralWindow.class,
-                        "spectrum", technicalGoalId, spectralWindowId);
-
-        return addNewChildObject(spectralWindow, spectralLine, spectralWindow::addToExpectedSpectralLine);
-    }
-
-    @DELETE
-    @Path("{technicalGoalId}/spectrum/{spectralWindowId}/expectedSpectralLine/{lineIndex}")
-    @Operation(summary = "remove the expected spectral line at 'lineIndex' from the spectral window with 'spectralWindowId' for the given TechnicalGoal")
-    @Transactional(rollbackOn = {WebApplicationException.class})
-    public Response removeExpectedSpectralLine(
-            @PathParam("proposalCode") Long proposalCode,
-            @PathParam("technicalGoalId") Long technicalGoalId,
-            @PathParam("spectralWindowId") Long spectralWindowId,
-            @PathParam("lineIndex") int lineIndex
-    )
-        throws WebApplicationException
-    {
-        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
-        TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
-                "technicalGoals", proposalCode, technicalGoalId);
-
-        ScienceSpectralWindow spectralWindow =
-                findChildByQuery(TechnicalGoal.class, ScienceSpectralWindow.class,
-                        "spectrum", technicalGoalId, spectralWindowId);
-
-        ExpectedSpectralLine line = spectralWindow.getExpectedSpectralLine().get(lineIndex);
-
-        return deleteChildObject(spectralWindow, line, spectralWindow::removeFromExpectedSpectralLine);
-    }
-
-    //no PUT method - we don't replace spectral lines, we only ever add or remove them
 }
