@@ -181,4 +181,36 @@ public class TechnicalGoalResource extends ObjectResourceBase{
         return spectralLine;
     }
 
+    @PUT
+    @Path("{technicalGoalId}/correlatorParameters/")
+    @Operation(summary = "replace the CorrelatorParameters in the given TechnicalGoal")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    public CorrelatorParameters replaceCorrelatorParameters(
+            @PathParam("proposalCode") Long proposalCode,
+            @PathParam("technicalGoalId") Long technicalGoalId,
+            CorrelatorParameters replacementParameters
+    )
+            throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+        TechnicalGoal goal = findChildByQuery(ObservingProposal.class, TechnicalGoal.class,
+                "technicalGoals", proposalCode, technicalGoalId);
+
+        CorrelatorParameters existingParameters = goal.getCorrelatorParameters();
+        if (existingParameters != null) {
+            // explicitly remove old pulsar gates so they don't become orphaned rows
+            // the generated @OneToMany composition with CascadeType.ALL but no orphanRemoval = true
+            // means they won't be deleted automatically
+            for (PulsarGate gate : existingParameters.getPulsarGates()) {
+                em.remove(gate);
+            }
+            existingParameters.updateUsing(replacementParameters);
+        } else {
+            goal.setCorrelatorParameters(replacementParameters);
+        }
+
+        return goal.getCorrelatorParameters();
+    }
+
 }
