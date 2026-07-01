@@ -1,7 +1,7 @@
 plugins {
     id("org.orph2020.pst.common-plugin")
 }
-version = "1.0"
+version = "0.2.0"
 
 dependencies {
     implementation("io.quarkus:quarkus-mailer")
