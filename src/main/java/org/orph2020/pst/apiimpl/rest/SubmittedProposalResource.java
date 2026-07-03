@@ -145,7 +145,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     @GET
     @Path("/{submittedProposalId}")
     @Operation(summary = "get the SubmittedProposal specified by 'submittedProposalId'")
-    @RolesAllowed({"tac_admin", "tac_member"})
+    @RolesAllowed({"tac_admin", "tac_member", "reviewer"})
     public SubmittedProposal getSubmittedProposal(@PathParam("cycleCode") Long cycleCode,
                                                 @PathParam("submittedProposalId") Long submittedProposalId)
     {
@@ -156,7 +156,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
 
     @GET
     @Path("/notYetAllocated")
-    @RolesAllowed({"tac_admin", "tac_member"})
+    @RolesAllowed({"tac_admin", "tac_member", "reviewer"})
     @Operation(summary = "get the Submitted Proposal Ids that have yet to be Allocated in the given cycle")
     public List<ObjectIdentifier> getSubmittedNotYetAllocated(@PathParam("cycleCode") Long cycleCode)
         throws WebApplicationException
@@ -224,7 +224,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
 
     @GET
     @Path("allReviewsLocked")
-    @RolesAllowed({"tac_admin", "tac_member"})
+    @RolesAllowed({"tac_admin", "tac_member", "reviewer"})
     @Operation(summary = "check that the reviews for all submitted proposals have been locked")
     public boolean checkAllReviewsLocked(@PathParam("cycleCode") Long cycleCode)
         throws WebApplicationException
@@ -373,8 +373,14 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     @Path("{submittedProposalId}/completeDate")
     @Operation(summary = "get the 'reviewsCompleteDate' of the given submitted proposal")
     @RolesAllowed({"tac_admin", "tac_member"})
-    public Date getReviewsCompleteDate(@PathParam("submittedProposalId") Long submittedProposalId) {
+    public Date getReviewsCompleteDate(
+            @PathParam("cycleCode") Long cycleCode,
+            @PathParam("submittedProposalId") Long submittedProposalId
+    ) {
         currentUserChecks.assertCurrentUserIsTacMember(getProposalCycleId(submittedProposalId));
+        //ToDo: check submitted proposal belongs to the cycle
+        //System.out.println(cycleCode);
+
         SubmittedProposal submittedProposal = findObject(SubmittedProposal.class, submittedProposalId);
         return submittedProposal.getReviewsCompleteDate();
     }
@@ -431,10 +437,17 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     @Operation(summary = "Download a zip file of the proposal including TAC Admin's pdf and all supporting documents")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
     @RolesAllowed({"tac_admin"})
-    public Response downloadAdminZip(@PathParam("submittedProposalId") Long submittedProposalId)
+    public Response downloadAdminZip(
+            @PathParam("cycleCode") Long cycleCode,
+            @PathParam("submittedProposalId") Long submittedProposalId
+    )
             throws WebApplicationException, IOException {
 
         currentUserChecks.assertCurrentUserIsTacChair(getProposalCycleId(submittedProposalId));
+        //TODO: check user is tac_adim for this cycle
+        //ToDO: check submitted proposals belongs to the cycle
+        //System.out.println(cycleCode);
+
         SubmittedProposal proposal = findObject(SubmittedProposal.class, submittedProposalId);
 
         String filename = proposal.getProposalCode() + "."
