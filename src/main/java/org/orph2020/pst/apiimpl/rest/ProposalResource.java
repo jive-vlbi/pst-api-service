@@ -189,6 +189,9 @@ public class ProposalResource extends ObjectResourceBase {
     @RolesAllowed("default-roles-orppst")
     public ObservingProposal createObservingProposal(ObservingProposal op)
             throws WebApplicationException {
+        if (!op.getAiAcknowledged()) {
+            throw new WebApplicationException("Proper AI usage acknowledgment is required", 400);
+        }
         ObservingProposal persisted = persistObject(op);
 
         //use the newly persisted proposal id (code) to create storage locations
@@ -343,6 +346,11 @@ public class ProposalResource extends ObjectResourceBase {
         } catch (WebApplicationException e) {
             valid = false;
             error.append("Justification PDF has not been generated.<br/>");
+        }
+
+        if (proposal.getAiAcknowledged() == null || !proposal.getAiAcknowledged()) {
+            valid = false;
+            error.append("AI usage acknowledgment is required.<br/>");
         }
 
         if(!valid) {
