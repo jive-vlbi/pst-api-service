@@ -1,0 +1,1 @@
+alter table if exists "pdm"."Investigator" add column "isContactAuthor" boolean not null default false;

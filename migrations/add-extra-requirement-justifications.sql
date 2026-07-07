@@ -1,0 +1,14 @@
+alter table if exists "pdm"."AbstractProposal" add column "eMerlin_ID" bigint;
+alter table if exists "pdm"."AbstractProposal" add column "eVlbi_ID" bigint;
+alter table if exists "pdm"."AbstractProposal" add column "triggered_ID" bigint;
+create table "pdm"."ExtraRequirementJustification" ("ID" bigint not null, "isActive" boolean not null, "justification" varchar(255), primary key ("ID"));
+alter table if exists "pdm"."AbstractProposal" drop constraint if exists "UKarhee06mjwrvomjwghw75rfo0";
+alter table if exists "pdm"."AbstractProposal" add constraint "UKarhee06mjwrvomjwghw75rfo0" unique ("eMerlin_ID");
+alter table if exists "pdm"."AbstractProposal" drop constraint if exists "UK5y8p90tmlc3u88fprl22cl0ej";
+alter table if exists "pdm"."AbstractProposal" add constraint "UK5y8p90tmlc3u88fprl22cl0ej" unique ("eVlbi_ID");
+alter table if exists "pdm"."AbstractProposal" drop constraint if exists "UK1jse9e30y31pnygm814jvjia6";
+alter table if exists "pdm"."AbstractProposal" add constraint "UK1jse9e30y31pnygm814jvjia6" unique ("triggered_ID");
+create sequence "ExtraRequirementJustification_SEQ" start with 1 increment by 50;
+alter table if exists "pdm"."AbstractProposal" add constraint "FK89e846ls18c2vxc9onehjhntu" foreign key ("eMerlin_ID") references "pdm"."ExtraRequirementJustification";
+alter table if exists "pdm"."AbstractProposal" add constraint "FKayfmj7qkngqkhnuslvdispyfk" foreign key ("eVlbi_ID") references "pdm"."ExtraRequirementJustification";
+alter table if exists "pdm"."AbstractProposal" add constraint "FKsoopxt0ivs82xmxlew3xn4nv4" foreign key ("triggered_ID") references "pdm"."ExtraRequirementJustification";
