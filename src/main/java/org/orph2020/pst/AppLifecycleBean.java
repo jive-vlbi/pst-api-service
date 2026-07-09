@@ -5,10 +5,7 @@ package org.orph2020.pst;
 
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
-import io.quarkus.runtime.configuration.ConfigUtils;
 import jakarta.inject.Inject;
-import org.apache.commons.io.FileUtils;
-import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.ivoa.dm.proposal.management.ProposalCycle;
 import org.ivoa.dm.proposal.prop.*;
 import org.jboss.logging.Logger;
@@ -22,7 +19,6 @@ import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
 import org.orph2020.pst.apiimpl.rest.ProposalDocumentStore;
 
-import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -34,9 +30,6 @@ public class AppLifecycleBean {
 
     @PersistenceContext
     protected EntityManager em;  // exists for the application lifetime no need to close
-
-    @ConfigProperty(name = "document-store.root")
-    String documentStoreRoot;
 
     @Inject
     ProposalDocumentStore proposalDocumentStore;
@@ -109,23 +102,6 @@ public class AppLifecycleBean {
 
 
 
-        //active profile should be the build-time profile
-        List<String> profiles = ConfigUtils.getProfiles();
-
-        //*****************************************************
-        //convenience total delete of the document store for development
-        // DO NOT DO THIS IN PRODUCTION
-        if (profiles.contains("dev")) {
-            LOGGER.info("Dev mode: Deleting document store...");
-            File documentStorePath = new File(documentStoreRoot);
-            LOGGER.info("Dev mode: Deleted document store");
-            try {
-                FileUtils.deleteDirectory(documentStorePath);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        //*****************************************************
     }
 }
 
