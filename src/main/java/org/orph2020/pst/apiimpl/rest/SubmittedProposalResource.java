@@ -312,7 +312,7 @@ public class SubmittedProposalResource extends ObjectResourceBase{
               error -> Log.error("submission mail failed", error)
         );
 
-        if (cycle.getSubmissionDeadline() == null) {
+        if (cycle.getIsImmediate()) {
             Log.info("Submitted proposal " + submittedProposal.getTitle() + " in immediate response cycle " + cycle.getTitle() + " - notify TAC");
             recipientEmails.clear();
             for (CommitteeMember tacMember : cycle.getTac().getMembers()) {

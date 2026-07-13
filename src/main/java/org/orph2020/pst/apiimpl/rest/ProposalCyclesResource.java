@@ -109,7 +109,7 @@ public class ProposalCyclesResource extends ObjectResourceBase {
             whereList.add("o.observatory._id = "+observatoryId);
         }
         if(immediateOnly) {
-            whereList.add("o.submissionDeadline IS NULL");
+            whereList.add("o.isImmediate");
         }
         if (whereList.size() > 0) {
             where = "WHERE "+String.join(" AND ", whereList);
@@ -214,7 +214,7 @@ public class ProposalCyclesResource extends ObjectResourceBase {
 
         return new ProposalCycleSynopsis(fullCycle.getTitle(), fullCycle.getCode(),
                 fullCycle.getSubmissionDeadline(), fullCycle.getObservationSessionStart(),
-                fullCycle.getObservationSessionEnd(), fullCycle.getObservatory());
+                fullCycle.getObservationSessionEnd(), fullCycle.getObservatory(), fullCycle.getIsImmediate());
 
     }
 
@@ -239,10 +239,11 @@ public class ProposalCyclesResource extends ObjectResourceBase {
         cycle.setObservationSessionStart(newDetails.observationSessionStart);
         cycle.setObservationSessionEnd(newDetails.observationSessionEnd);
         cycle.setObservatory(newDetails.observatory);
+        cycle.setIsImmediate(newDetails.isImmediate);
 
         return new ProposalCycleSynopsis(cycle.getTitle(), cycle.getCode(),
                 cycle.getSubmissionDeadline(), cycle.getObservationSessionStart(),
-                cycle.getObservationSessionEnd(), cycle.getObservatory());
+                cycle.getObservationSessionEnd(), cycle.getObservatory(), cycle.getIsImmediate());
     }
 
     @PUT

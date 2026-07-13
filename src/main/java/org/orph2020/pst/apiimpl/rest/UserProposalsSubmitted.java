@@ -21,6 +21,7 @@ import org.ivoa.dm.proposal.prop.InvestigatorKind;
 import org.ivoa.dm.proposal.prop.Person;
 import org.ivoa.dm.proposal.prop.RelatedProposal;
 import org.orph2020.pst.common.json.ObjectIdentifier;
+import org.orph2020.pst.common.json.ProposalCycleSynopsis;
 import org.orph2020.pst.common.json.SubmittedProposalMailData;
 import org.orph2020.pst.common.json.SubmittedProposalSynopsis;
 import org.orph2020.pst.apiimpl.CurrentUserChecks;
@@ -111,12 +112,12 @@ public class UserProposalsSubmitted extends ObjectResourceBase {
         throws WebApplicationException
     {
         currentUserChecks.assertCurrentUserIsPi(submittedProposalId);
-        Date submissionDeadline = proposalCyclesResource.getProposalCycleDetails(cycleCode).submissionDeadline;
-        if (submissionDeadline == null) {
-            throw new WebApplicationException("You may not withdraw your proposal from an immediate respone cycle. Please contact the TAC if you want to withdraw",
+        ProposalCycleSynopsis cycleDetails = proposalCyclesResource.getProposalCycleDetails(cycleCode);
+        if (cycleDetails.isImmediate) {
+            throw new WebApplicationException("You may not withdraw your proposal from an immediate response cycle. Please contact the TAC if you want to withdraw",
                     Response.Status.CONFLICT);
         }
-        if (submissionDeadline.before(new Date())) {
+        if (cycleDetails.submissionDeadline.before(new Date())) {
             throw new WebApplicationException("You may not withdraw your proposal as the submission date has been surpassed. Please contact the TAC if you want to withdraw",
                     Response.Status.CONFLICT);
         }

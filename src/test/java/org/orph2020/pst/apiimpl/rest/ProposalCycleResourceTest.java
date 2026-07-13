@@ -74,6 +74,7 @@ public class ProposalCycleResourceTest {
       newCycle.setObservationSessionStart(new Date());
       newCycle.setObservationSessionEnd(new Date());
       newCycle.setTac(new TAC());
+      newCycle.setIsImmediate(false);
 
       String body = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(newCycle);
       //System.out.println("New proposal cycle looks like this: " + body);
@@ -161,6 +162,7 @@ public class ProposalCycleResourceTest {
       targetCycle.setObservationSessionStart(new Date(System.currentTimeMillis() + 60 * 24 * 60 * 60 * 1000L));
       targetCycle.setObservationSessionEnd(new Date(System.currentTimeMillis() + 180 * 24 * 60 * 60 * 1000L));
       targetCycle.setTac(new TAC());
+      targetCycle.setIsImmediate(false);
 
       String body = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(targetCycle);
 
