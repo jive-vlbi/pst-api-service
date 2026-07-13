@@ -33,11 +33,15 @@ public class AllocatedProposalResource extends ObjectResourceBase{
         String select = "select o._id,o.submitted.title ";
         String from = "from ProposalCycle p ";
         String innerJoins = "inner join p.allocatedProposals o ";
-        String where = "where p._id=" + cycleCode + " ";
-        String titleLike = title == null ? "" : "and o.submitted.title like '" + title + "' ";
+        String where = "where p._id = ?1 ";
+        String titleLike = title == null ? "" : "and o.submitted.title like ?2 ";
         String orderBy = "order by o.submitted.title";
 
-        return getObjectIdentifiers(select + from + innerJoins + where + titleLike + orderBy);
+        if (title == null) {
+            return getObjectIdentifiers(select + from + innerJoins + where + orderBy, cycleCode);
+        } else {
+            return getObjectIdentifiers(select + from + innerJoins + where + titleLike + orderBy, cycleCode, title);
+        }
     }
 
     @GET

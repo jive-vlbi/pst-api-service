@@ -2,7 +2,6 @@ package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
-import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -15,6 +14,7 @@ import org.jboss.resteasy.reactive.RestQuery;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Path("proposalCycles/{cycleCode}/TAC")
@@ -45,25 +45,27 @@ public class TACResource extends ObjectResourceBase {
                                                       @RestQuery TacRole memberRole)
     {
         currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
+        List<Object> params = new ArrayList<>();
+        params.add(cycleCode);
+        int paramIndex = 1;
+
         String nameLike = (personName == null) ? "" :
-                "and m.member.person.fullName = :pName ";
+                "and m.member.person.fullName = ?" + (++paramIndex) + " ";
 
         String roleLike = (memberRole == null) ? "" :
-                "and m.role = :mRole ";
+                "and m.role = ?" + (++paramIndex) + " ";
 
         String qlString = "select m._id,cast(m.member.person._id as string),cast(m.role as string) from ProposalCycle p "
                 + "inner join p.tac t inner join t.members m "
-                + "where p._id=" + cycleCode + " "
+                + "where p._id = ?1 "
                 + nameLike + roleLike + "order by m.role";
 
-        Query query = em.createQuery(qlString);
-
-        if (personName != null) query.setParameter("pName", personName);
-        if (memberRole != null) query.setParameter("mRole", memberRole);
+        if (personName != null) params.add(personName);
+        if (memberRole != null) params.add(memberRole);
 
         //using the 3 argument ObjectIdentifier constructor
 
-        return getObjectIdentifiersAlt(query);
+        return getObjectIdentifiersAlt(qlString, params.toArray());
     }
 
     @GET
@@ -99,13 +101,10 @@ public class TACResource extends ObjectResourceBase {
         //we enforce a one-to-one relationship between Person and Reviewer
 
         //check to see if the incoming Person is an existing Reviewer
-        String qlString = "select r._id,cast(r.person._id as string),r.person.fullName from Reviewer r where r.person._id =: pid";
-
-        Query query = em.createQuery(qlString);
-        query.setParameter("pid", newMember.getId());
+        String qlString = "select r._id,cast(r.person._id as string),r.person.fullName from Reviewer r where r.person._id = ?1";
 
         //This list should be either empty or containing exactly one element.
-        List<ObjectIdentifier> existingReviewer = getObjectIdentifiersAlt(query);
+        List<ObjectIdentifier> existingReviewer = getObjectIdentifiersAlt(qlString, newMember.getId());
 
         Reviewer reviewer = existingReviewer.isEmpty() ?
                 em.merge(new Reviewer(newMember)) : //persist the Person as a Reviewer

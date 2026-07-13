@@ -2,7 +2,6 @@ package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
-import jakarta.persistence.Query;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.prop.*;
@@ -16,6 +15,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -55,22 +55,29 @@ public class ObservationResource extends ObjectResourceBase {
                 "select o._id,cast(Type(o) as string),t.sourceName ";
         String from = "from ObservingProposal p ";
         String innerJoin = "inner join p.observations o inner join o.target t ";
-        String where = "where p._id=" + proposalCode + " ";
+        String where = "where p._id = ?1 ";
         String orderBy = "order by t.sourceName";
 
-        String typeQuery = type != null ?
-                "and cast(Type(o) as string) like :typeName " : "";
-        String srcLike = srcName != null ?
-                "and t.sourceName like :sourceName " : "";
+        List<Object> params = new ArrayList<>();
+        params.add(proposalCode);
+        int paramIndex = 1;
+
+        String typeQuery = "";
+        if (type != null) {
+            typeQuery = "and cast(Type(o) as string) like ?" + (++paramIndex) + " ";
+        }
+        String srcLike = "";
+        if (srcName != null) {
+            srcLike = "and t.sourceName like ?" + (++paramIndex) + " ";
+        }
 
         String qlString = select + from + innerJoin + where +
                 typeQuery + srcLike + orderBy;
 
-        Query query = em.createQuery(qlString);
-        if (type != null) query.setParameter("typeName", "%" + type.name() + "%");
-        if (srcName != null) query.setParameter("sourceName", srcName);
+        if (type != null) params.add("%" + type.name() + "%");
+        if (srcName != null) params.add(srcName);
 
-        List<ObjectIdentifier> result = getObjectIdentifiersAlt(query);
+        List<ObjectIdentifier> result = getObjectIdentifiersAlt(qlString, params.toArray());
 
         // edit the 'type' name i.e., the ObjectIdentifier.code member, to use as a display string
         // general format: 'proposal:<Type>Observation'

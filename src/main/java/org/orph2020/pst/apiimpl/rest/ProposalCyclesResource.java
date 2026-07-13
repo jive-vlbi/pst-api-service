@@ -5,7 +5,6 @@ package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
-import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.Response;
 import org.apache.poi.ss.usermodel.Cell;
@@ -99,6 +98,7 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     public List<ObjectIdentifier> getProposalCycles(@RestQuery boolean includeClosed, @RestQuery long observatoryId, @RestQuery boolean immediateOnly) {
         String select = "SELECT o._id,o.title FROM ProposalCycle o ";
         List<String> whereList = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
         String where = "";
         String order = " ORDER BY o.submissionDeadline";
 
@@ -106,7 +106,8 @@ public class ProposalCyclesResource extends ObjectResourceBase {
             whereList.add("(o.submissionDeadline IS NULL OR o.submissionDeadline > CURRENT_TIMESTAMP())");
         }
         if (observatoryId > 0) {
-            whereList.add("o.observatory._id = "+observatoryId);
+            params.add(observatoryId);
+            whereList.add("o.observatory._id = ?" + params.size());
         }
         if(immediateOnly) {
             whereList.add("o.isImmediate");
@@ -115,7 +116,7 @@ public class ProposalCyclesResource extends ObjectResourceBase {
             where = "WHERE "+String.join(" AND ", whereList);
         }
 
-        return super.getObjectIdentifiers(select + where + order);
+        return super.getObjectIdentifiers(select + where + order, params.toArray());
     }
 
 
@@ -317,11 +318,10 @@ public class ProposalCyclesResource extends ObjectResourceBase {
     public List<ObjectIdentifier> getCycleAllocationGrades(@PathParam("cycleCode") Long cycleCode)
     {
         currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
-        Query query = em.createQuery(
-                "Select o._id,o.description,o.name from ProposalCycle p inner join p.possibleGrades o where p._id = "+cycleCode+" Order by o.name"
+        return getObjectIdentifiersAlt(
+                "Select o._id,o.description,o.name from ProposalCycle p inner join p.possibleGrades o where p._id = ?1 Order by o.name",
+                cycleCode
         );
-
-        return getObjectIdentifiersAlt(query);
     }
 
     @GET

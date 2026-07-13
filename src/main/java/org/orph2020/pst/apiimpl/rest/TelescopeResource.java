@@ -46,9 +46,9 @@ public class TelescopeResource extends ObjectResourceBase{
                                                             @RestQuery String name)
     {
         if (name == null) {
-            return getObjectIdentifiers("SELECT t._id,t.name FROM Observatory o Inner Join o.telescopes t WHERE o._id = "+observatoryId+" ORDER BY t.name");
+            return getObjectIdentifiers("SELECT t._id,t.name FROM Observatory o Inner Join o.telescopes t WHERE o._id = ?1 ORDER BY t.name", observatoryId);
         } else {
-            return getObjectIdentifiers("SELECT t._id,t.name FROM Observatory o Inner Join o.telescopes t WHERE o._id = "+observatoryId+" and t.name like '"+name+"' ORDER BY t.name");
+            return getObjectIdentifiers("SELECT t._id,t.name FROM Observatory o Inner Join o.telescopes t WHERE o._id = ?1 and t.name like ?2 ORDER BY t.name", observatoryId, name);
         }
 
     }

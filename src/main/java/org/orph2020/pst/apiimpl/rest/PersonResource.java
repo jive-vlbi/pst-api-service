@@ -60,7 +60,7 @@ public class PersonResource extends ObjectResourceBase {
       if(name == null)
          return getObjectIdentifiers("SELECT o._id,o.fullName FROM Person o ORDER BY o.fullName");
       else
-         return getObjectIdentifiers("SELECT o._id,o.fullName FROM Person o Where o.fullName like '"+name+"' ORDER BY o.fullName");
+         return getObjectIdentifiers("SELECT o._id,o.fullName FROM Person o Where o.fullName like ?1 ORDER BY o.fullName", name);
    }
 
    @GET
@@ -97,7 +97,7 @@ public class PersonResource extends ObjectResourceBase {
    @Operation(summary = "get a Person with the provided email address, no match returns id:0 name:Not found")
    public ObjectIdentifier getPersonByEmail(@RestQuery String email)
    {
-       List<ObjectIdentifier> people = getObjectIdentifiers("SELECT o._id,o.fullName FROM Person o Where lower(o.eMail) = lower('" + email + "')");
+       List<ObjectIdentifier> people = getObjectIdentifiers("SELECT o._id,o.fullName FROM Person o Where lower(o.eMail) = lower(?1)", email);
       if(people.isEmpty())
           return new ObjectIdentifier(0, "Not found");
        return people.get(0);

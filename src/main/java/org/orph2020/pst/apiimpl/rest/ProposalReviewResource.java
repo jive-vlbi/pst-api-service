@@ -13,6 +13,7 @@ import org.ivoa.dm.proposal.management.SubmittedProposal;
 import org.jboss.resteasy.reactive.RestQuery;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -35,15 +36,19 @@ public class ProposalReviewResource extends ObjectResourceBase{
         String select = "select r._id,r.reviewer.person.fullName ";
         String from = "from ProposalCycle c ";
         String innerJoins = "inner join c.submittedProposals p inner join p.reviews r ";
-        String where = "where c._id=" + cycleCode + " and p._id=" + submittedProposalId + " ";
+        String where = "where c._id = ?1 and p._id = ?2 ";
+        List<Object> params = new ArrayList<>();
+        params.add(cycleCode);
+        params.add(submittedProposalId);
 
         if (reviewerId != null) {
-            where = where + "and r.reviewer._id =" + Long.parseLong(reviewerId) + " ";
+            params.add(Long.parseLong(reviewerId));
+            where = where + "and r.reviewer._id = ?3 ";
         }
 
         String orderBy = "order by r.reviewer.person.fullName";
 
-        return getObjectIdentifiers(select + from + innerJoins + where + orderBy);
+        return getObjectIdentifiers(select + from + innerJoins + where + orderBy, params.toArray());
     }
 
     @GET

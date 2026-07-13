@@ -30,7 +30,7 @@ public class RequestedResourcesResource extends ObjectResourceBase {
         throws WebApplicationException
     {
         currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
-        return getObjectIdentifiers("SELECT r._id,coalesce(r.name,cast(r._id as string)) FROM ObservingProposal o Inner Join o.requestedResources r WHERE o._id = "+proposalCode);
+        return getObjectIdentifiers("SELECT r._id,coalesce(r.name,cast(r._id as string)) FROM ObservingProposal o Inner Join o.requestedResources r WHERE o._id = ?1", proposalCode);
     }
 
     @GET

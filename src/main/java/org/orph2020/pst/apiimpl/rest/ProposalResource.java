@@ -466,9 +466,9 @@ public class ProposalResource extends ObjectResourceBase {
     {
         currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         if (sourceName == null) {
-            return getObjectIdentifiers("SELECT t._id,t.sourceName FROM ObservingProposal o Inner Join o.targets t WHERE o._id = "+proposalCode+" ORDER BY t.sourceName");
+            return getObjectIdentifiers("SELECT t._id,t.sourceName FROM ObservingProposal o Inner Join o.targets t WHERE o._id = ?1 ORDER BY t.sourceName", proposalCode);
         } else {
-            return getObjectIdentifiers("SELECT t._id,t.sourceName FROM ObservingProposal o Inner Join o.targets t WHERE o._id = "+proposalCode+" and t.sourceName like '"+sourceName+"' ORDER BY t.sourceName");
+            return getObjectIdentifiers("SELECT t._id,t.sourceName FROM ObservingProposal o Inner Join o.targets t WHERE o._id = ?1 and t.sourceName like ?2 ORDER BY t.sourceName", proposalCode, sourceName);
         }
 
     }
@@ -649,9 +649,9 @@ public class ProposalResource extends ObjectResourceBase {
     {
         currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         if (fieldName == null) {
-            return getObjectIdentifiers("SELECT t._id,t.name FROM ObservingProposal o Inner Join o.fields t WHERE o._id = "+proposalCode+" ORDER BY t.name");
+            return getObjectIdentifiers("SELECT t._id,t.name FROM ObservingProposal o Inner Join o.fields t WHERE o._id = ?1 ORDER BY t.name", proposalCode);
         } else {
-            return getObjectIdentifiers("SELECT t._id,t.name FROM ObservingProposal o Inner Join o.fields t WHERE o._id = "+proposalCode+" and t.name like '"+fieldName+"' ORDER BY t.name");
+            return getObjectIdentifiers("SELECT t._id,t.name FROM ObservingProposal o Inner Join o.fields t WHERE o._id = ?1 and t.name like ?2 ORDER BY t.name", proposalCode, fieldName);
         }
 
     }

@@ -7,7 +7,6 @@ import io.smallrye.common.annotation.Blocking;
 import io.smallrye.mutiny.Uni;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
-import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -86,49 +85,49 @@ public class SubmittedProposalResource extends ObjectResourceBase{
     {
         currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         if (sourceProposalId != null) {
-            String qlString = getQlString(cycleCode);
-            Query query = em.createQuery(qlString);
-            query.setParameter("sourceProposalId", sourceProposalId);
-            return getObjectIdentifiersAlt(query);
+            String qlString = getQlString();
+            return getObjectIdentifiersAlt(qlString, cycleCode, sourceProposalId);
 
         } else {
 
-            String qlString = getQlString(cycleCode, title, investigatorName);
-            Query query = em.createQuery(qlString);
-            if (investigatorName != null) query.setParameter("investigatorName", investigatorName);
-            if (title != null) query.setParameter("title", title);
-            return getObjectIdentifiersAlt(query);
+            String qlString = getQlString(title, investigatorName);
+            List<Object> params = new ArrayList<>();
+            params.add(cycleCode);
+            if (investigatorName != null) params.add(investigatorName);
+            if (title != null) params.add(title);
+            return getObjectIdentifiersAlt(qlString, params.toArray());
 
         }
 
     }
 
-    private String getQlString(Long cycleCode) {
+    private String getQlString() {
         String baseStr = "select distinct s._id,cast(s.submissionDate as string),s.title "
                 + "from ProposalCycle c "
                 + "inner join c.submittedProposals s "
                 + "inner join s.relatedProposals r "
-                + "where c._id=" + cycleCode + " "
-                + "and r.proposal._id = :sourceProposalId ";
+                + "where c._id = ?1 "
+                + "and r.proposal._id = ?2 ";
 
         String orderByStr = "order by s._id";
 
         return baseStr + orderByStr;
     }
 
-    private static String getQlString(Long cycleCode, String title, String investigatorName) {
+    private static String getQlString(String title, String investigatorName) {
+        int paramIndex = 1;
         String baseStr = "select distinct s._id,cast(s.submissionDate as string),s.title "
                 + "from ProposalCycle c, Investigator i "
                 + "inner join c.submittedProposals s "
                 + "where i member of s.investigators "
-                + "and c._id=" + cycleCode + " ";
+                + "and c._id = ?" + paramIndex + " ";
 
         String orderByStr = "order by s.title";
 
         String investigatorLikeStr = investigatorName != null ?
-                "and i.person.fullName like :investigatorName " : "";
+                "and i.person.fullName like ?" + (++paramIndex) + " " : "";
         String titleLikeStr = title != null ?
-                "and s.title like :title " : "";
+                "and s.title like ?" + (++paramIndex) + " " : "";
 
         return baseStr + investigatorLikeStr + titleLikeStr + orderByStr;
     }

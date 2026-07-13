@@ -32,9 +32,14 @@ abstract public class ObjectResourceBase {
     protected static final String NON_ASSOCIATE_NAME =
             "%s with identifier: %s is not associated with the %s with id: %d";
 
-    protected List<ObjectIdentifier> getObjectIdentifiers(String queryStr){
+    protected List<ObjectIdentifier> getObjectIdentifiers(String queryStr, Object... params){
         List<ObjectIdentifier> result = new ArrayList<>();
         Query query = em.createQuery(queryStr);
+        if (params != null) {
+            for (int i = 0; i < params.length; i++) {
+                query.setParameter(i + 1, params[i]);
+            }
+        }
         List<Object[]> results = query.getResultList();
         for (Object[] r : results)
         {
@@ -45,8 +50,14 @@ abstract public class ObjectResourceBase {
     }
 
     // Uses the three parameter ObjectIdentifier constructor
-    protected List<ObjectIdentifier> getObjectIdentifiersAlt(Query query){
+    protected List<ObjectIdentifier> getObjectIdentifiersAlt(String queryStr, Object... params){
         List<ObjectIdentifier> result = new ArrayList<>();
+        Query query = em.createQuery(queryStr);
+        if (params != null) {
+            for (int i = 0; i < params.length; i++) {
+                query.setParameter(i + 1, params[i]);
+            }
+        }
         List<Object[]> results = query.getResultList();
         for (Object[] r : results) {
             result.add(new ObjectIdentifier((Long)r[0], (String)r[1], (String)r[2]));

@@ -36,10 +36,10 @@ public class BackendResource extends ObjectResourceBase{
     {
         if (name == null) {
             return getObjectIdentifiers(
-                    "SELECT b._id,b.name FROM Observatory o Inner Join o.backends b WHERE o._id = "+observatoryId+" ORDER BY b.name");
+                    "SELECT b._id,b.name FROM Observatory o Inner Join o.backends b WHERE o._id = ?1 ORDER BY b.name", observatoryId);
         } else {
             return getObjectIdentifiers(
-                    "SELECT b._id,b.name FROM Observatory o Inner Join o.backends b WHERE o._id = "+observatoryId+" and b.name like '"+name+"' ORDER BY b.name");
+                    "SELECT b._id,b.name FROM Observatory o Inner Join o.backends b WHERE o._id = ?1 and b.name like ?2 ORDER BY b.name", observatoryId, name);
         }
     }
 

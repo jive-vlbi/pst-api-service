@@ -1,7 +1,6 @@
 package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.annotation.security.RolesAllowed;
-import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.openapi.annotations.Operation;
@@ -48,11 +47,9 @@ public class ObservingModeResource extends ObjectResourceBase {
     {
         String qlString = "select om._id,om.name,om.description from ProposalCycle c "
                 + "inner join c.observingModes om "
-                + "where c._id=" + cycleId + " order by om._id";
+                + "where c._id = ?1 order by om._id";
 
-        Query query = em.createQuery(qlString);
-
-        return getObjectIdentifiersAlt(query);
+        return getObjectIdentifiersAlt(qlString, cycleId);
     }
 
 
@@ -224,11 +221,10 @@ public class ObservingModeResource extends ObjectResourceBase {
             addNewChildObject(targetCycle, newMode, targetCycle::addToObservingModes);
         }
 
-        Query query = em.createQuery(
+        return getObjectIdentifiersAlt(
                 "select om._id,om.name,om.description from ProposalCycle c "
                         + "inner join c.observingModes om "
-                        + "where c._id = :cycleId order by om._id");
-        query.setParameter("cycleId", cycleId);
-        return getObjectIdentifiersAlt(query);
+                        + "where c._id = ?1 order by om._id",
+                cycleId);
     }
 }

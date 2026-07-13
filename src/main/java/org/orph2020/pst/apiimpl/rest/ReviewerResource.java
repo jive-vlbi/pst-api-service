@@ -2,7 +2,6 @@ package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
-import jakarta.persistence.Query;
 import jakarta.persistence.TypedQuery;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
@@ -35,8 +34,7 @@ public class ReviewerResource extends ObjectResourceBase{
         // 3 argument ObjectIdentifier is Long, String, String
         String qlString = "select r._id,cast(r.person._id as string),r.person.fullName from Reviewer r";
 
-        Query query = em.createQuery(qlString);
-        return getObjectIdentifiersAlt(query);
+        return getObjectIdentifiersAlt(qlString);
     }
 
     @GET

@@ -36,7 +36,7 @@ public class ObservatoryResource extends ObjectResourceBase {
         if (name == null) {
             return getObjectIdentifiers("SELECT o._id,o.name FROM Observatory o ORDER BY o.name");
         } else {
-            return getObjectIdentifiers("SELECT o._id,o.name FROM Observatory o WHERE o.name like '" +name+ "'ORDER BY o.name");
+            return getObjectIdentifiers("SELECT o._id,o.name FROM Observatory o WHERE o.name like ?1 ORDER BY o.name", name);
         }
     }
 
@@ -144,7 +144,7 @@ public class ObservatoryResource extends ObjectResourceBase {
     public List<ObjectIdentifier> getTelescopeArrays(@PathParam("observatoryId") Long observatoryId)
         throws WebApplicationException
     {
-        return getObjectIdentifiers("select a._id,a.name from Observatory o inner join o.arrays a where o._id = "+observatoryId+" order by a.name");
+        return getObjectIdentifiers("select a._id,a.name from Observatory o inner join o.arrays a where o._id = ?1 order by a.name", observatoryId);
     }
 
     @GET

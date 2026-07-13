@@ -1,7 +1,6 @@
 package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.annotation.security.RolesAllowed;
-import jakarta.persistence.Query;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -33,12 +32,10 @@ public class AllocatedBlockResource extends ObjectResourceBase{
         currentUserChecks.assertCurrentUserIsTacMember(cycleCode);
         String qlString = "select b._id,b.resource.type.name,b.grade.name from ProposalCycle c "
                 + "inner join c.allocatedProposals a inner join a.allocation b "
-                + "where c._id=" + cycleCode + " and a._id=" + allocatedId + " "
+                + "where c._id = ?1 and a._id = ?2 "
                 + "order by b.grade.name";
 
-        Query query = em.createQuery(qlString);
-
-        return getObjectIdentifiersAlt(query);
+        return getObjectIdentifiersAlt(qlString, cycleCode, allocatedId);
     }
 
     @GET

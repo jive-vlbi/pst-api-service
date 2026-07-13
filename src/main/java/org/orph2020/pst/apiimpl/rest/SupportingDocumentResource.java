@@ -75,9 +75,9 @@ public class SupportingDocumentResource extends ObjectResourceBase {
     {
         currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
         if (title == null) {
-            return getObjectIdentifiers("SELECT s._id,s.title FROM AbstractProposal o Inner Join o.supportingDocuments s WHERE o._id = "+proposalCode+" ORDER BY s.title");
+            return getObjectIdentifiers("SELECT s._id,s.title FROM AbstractProposal o Inner Join o.supportingDocuments s WHERE o._id = ?1 ORDER BY s.title", proposalCode);
         } else {
-            return getObjectIdentifiers("SELECT s._id,s.title FROM AbstractProposal o Inner Join o.supportingDocuments s WHERE o._id = "+proposalCode+" and s.title like '"+title+"' ORDER BY s.title");
+            return getObjectIdentifiers("SELECT s._id,s.title FROM AbstractProposal o Inner Join o.supportingDocuments s WHERE o._id = ?1 and s.title like ?2 ORDER BY s.title", proposalCode, title);
         }
     }
 
