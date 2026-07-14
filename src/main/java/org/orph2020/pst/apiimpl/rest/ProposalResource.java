@@ -762,13 +762,31 @@ public class ProposalResource extends ObjectResourceBase {
         }
 
         html += "<h3>Summary</h3>\n" +
-            "<p>" + htmlEsc(proposal.getSummary()) + "</p><br/>\n" +
+            "<p>" + htmlEsc(proposal.getSummary()).replace("\n", "<br/>\n") + "</p><br/>\n" +
+            extraJustificationsSection(proposal) +
             targetsTable(proposal.getTargets()) + "<br/>\n" +
             technicalGoalsTable(proposal.getTechnicalGoals()) +  "<br/>\n" +
             observationsTable(proposal.getObservations()) +
             "</body>\n" + "</html>\n";
 
         proposalDocumentStore.writeStringToFile(html, proposal.getId() + "/Overview.html");
+    }
+
+    private String extraJustificationsSection(AbstractProposal proposal) {
+        StringBuilder sb = new StringBuilder();
+        Object[][] entries = {
+            {"e-MERLIN justification", proposal.getEMerlin()},
+            {"e-EVN justification", proposal.getEVlbi()},
+            {"Triggered observations justification", proposal.getTriggered()}
+        };
+        for (Object[] entry : entries) {
+            ExtraRequirementJustification erj = (ExtraRequirementJustification) entry[1];
+            if (erj != null && erj.getIsActive()) {
+                sb.append("<h3>").append(htmlEsc((String) entry[0])).append("</h3>\n")
+                  .append("<p>").append(htmlEsc(erj.getJustification()).replace("\n", "<br/>\n")).append("</p><br/>\n");
+            }
+        }
+        return sb.toString();
     }
 
     static final String beginRow = "<tr><td>";
@@ -797,21 +815,19 @@ public class ProposalResource extends ObjectResourceBase {
                 .replace("\"", "\\\"");
     }
 
-    static HashMap<String, String> unitAbbr = new HashMap<>();
+    static Map<String, String> unitAbbr = Map.of(
+            "microarcsec", "uas",
+            "milliarcsec", "mas",
+            "arcsec", "arcsec",
+            "arcmin", "arcmin",
+            "milliradians", "mrad",
+            "degrees", "degrees",
+            "microJansky", "uJy",
+            "milliJansky", "mJy",
+            "Jansky", "Jy"
+    );
 
     private String unitAsShortString(RealQuantity unit) {
-        if(unitAbbr.isEmpty()) {
-            unitAbbr.put("microarcsec", "uas");
-            unitAbbr.put("milliarcsec", "mas");
-            unitAbbr.put("arcsec", "arcsec");
-            unitAbbr.put("arcmin", "arcmin");
-            unitAbbr.put("milliradians", "mrad");
-            unitAbbr.put("degrees", "degrees");
-            unitAbbr.put("microJansky", "uJy");
-            unitAbbr.put("milliJansky", "mJyrees");
-            unitAbbr.put("Jansky", "Jy");
-        }
-
         if(unit.getUnit().value().length() <= 4) {
             return unit.getUnit().value();
         }
@@ -835,11 +851,11 @@ public class ProposalResource extends ObjectResourceBase {
     private String targetsTable(List<Target> targets) {
         try {
             StringBuilder proposalTargets = new StringBuilder(startTable);
-            proposalTargets.append(htmlHeader("Targets"));
+            proposalTargets.append(htmlHeader("Sources"));
             proposalTargets.append(beginHead)
                     .append("Name").append(headDelim)
                     .append("Frame").append(headDelim)
-                    .append("Epoc").append(headDelim)
+                    .append("Epoch").append(headDelim)
                     .append("Lat").append(headDelim)
                     .append("Lon").append(endHead);
             for (Target target : targets) {
@@ -903,11 +919,14 @@ public class ProposalResource extends ObjectResourceBase {
 
     private String technicalGoalsTable(List<TechnicalGoal> technicalGoals) {
         StringBuilder proposalTechnicalGoals = new StringBuilder(startTable);
-        proposalTechnicalGoals.append(htmlHeader("Technical Goals"));
-        proposalTechnicalGoals.append(beginHead).append("ID").append(headDelim).append("Angular Resolution")
-                .append(headDelim).append("Largest scale</th>")
-                .append("<th>Sensitivity").append(headDelim).append("Dynamic range")
-                .append(headDelim).append("Spectral Windows").append(endHead);
+        proposalTechnicalGoals.append(htmlHeader("Technical goals"));
+        proposalTechnicalGoals.append(beginHead).append("ID")
+            .append(headDelim).append("Angular resolution")
+            .append(headDelim).append("Largest scale")
+            .append(headDelim).append("Sensitivity")
+            .append(headDelim).append("Dynamic range")
+            .append(headDelim).append("Field of view")
+            .append(headDelim).append("Cross hand").append(endHead);
 
         for(TechnicalGoal technicalGoal : technicalGoals) {
             proposalTechnicalGoals.append(beginRow)
@@ -920,10 +939,65 @@ public class ProposalResource extends ObjectResourceBase {
                     .append(quantityString(technicalGoal.getPerformance().getDesiredSensitivity()))
                     .append(tableDelim)
                     .append(quantityString(technicalGoal.getPerformance().getDesiredDynamicRange()))
+                    .append(tableDelim)
+                    .append(technicalGoal.getCorrelatorParameters()!=null?quantityString(technicalGoal.getCorrelatorParameters().getFieldOfView()):"?")
+                    .append(tableDelim)
+                    .append(technicalGoal.getCorrelatorParameters()!=null?(technicalGoal.getCorrelatorParameters().getDoCrossHands()?"Yes":"No"):"?")
                     .append(endRow);
+
+            // pulsar gates subtable
+            if (technicalGoal.getCorrelatorParameters() != null
+                    && technicalGoal.getCorrelatorParameters().getPulsarGates() != null
+                    && !technicalGoal.getCorrelatorParameters().getPulsarGates().isEmpty()) {
+                proposalTechnicalGoals.append("<tr><td style=\"padding-left:2em\">Pulsar gates</td><td colspan=\"6\">")
+                        .append(pulsarGatesSubtable(technicalGoal.getCorrelatorParameters().getPulsarGates()))
+                        .append("</td></tr>\n");
+            }
+
+            // spectral lines subtable
+            if (technicalGoal.getSpectralLine() != null
+                    && !technicalGoal.getSpectralLine().isEmpty()) {
+                proposalTechnicalGoals.append("<tr><td style=\"padding-left:2em\">Spectral lines</td><td colspan=\"6\">")
+                        .append(spectralLinesSubtable(technicalGoal.getSpectralLine()))
+                        .append("</td></tr>\n");
+            }
         }
         proposalTechnicalGoals.append(endTable);
         return proposalTechnicalGoals.toString();
+    }
+
+    private String pulsarGatesSubtable(List<PulsarGate> gates) {
+        StringBuilder sb = new StringBuilder(startTable);
+        sb.append(beginHead).append("Phase start").append(headDelim)
+                .append("Phase end").append(headDelim)
+                .append("Number of bins").append(endHead);
+        for (PulsarGate gate : gates) {
+            sb.append(beginRow)
+                    .append(quantityString(gate.getPhaseStart())).append(tableDelim)
+                    .append(quantityString(gate.getPhaseEnd())).append(tableDelim)
+                    .append(gate.getNumberOfBins() != null ? gate.getNumberOfBins() : "Not set")
+                    .append(endRow);
+        }
+        sb.append(endTable);
+        return sb.toString();
+    }
+
+    private String spectralLinesSubtable(List<EVNSpectralLine> lines) {
+        StringBuilder sb = new StringBuilder(startTable);
+        sb.append(beginHead).append("Rest frequency").append(headDelim)
+                .append("Shift").append(headDelim)
+                .append("Range").append(headDelim)
+                .append("Resolution").append(endHead);
+        for (EVNSpectralLine line : lines) {
+            sb.append(beginRow)
+                    .append(quantityString(line.getRestFrequency())).append(tableDelim)
+                    .append(quantityString(line.getShift())).append(tableDelim)
+                    .append(quantityString(line.getRange())).append(tableDelim)
+                    .append(quantityString(line.getResolution()))
+                    .append(endRow);
+        }
+        sb.append(endTable);
+        return sb.toString();
     }
 
     private String targetNamesTable(List<Target> targets) {
@@ -968,18 +1042,111 @@ public class ProposalResource extends ObjectResourceBase {
     }
 
     private String observationsTable(List<Observation> observations) {
-        StringBuilder proposalObservations = new StringBuilder(startTable);
-        proposalObservations.append(htmlHeader("Observations"));
-        proposalObservations.append(beginHead).append("Technical Goal").append(headDelim).append("Targets")
-                .append(headDelim).append("Timing windows").append(endHead);
-        for(Observation observation : observations) {
-            proposalObservations.append(beginRow)
-                    .append(observation.getTechnicalGoal().getId()).append(tableDelim)
-                    .append(targetNamesTable(Arrays.asList(observation.getTarget()))).append(tableDelim)
-                    .append(timingWindowsTable(observation.getConstraints())).append(endRow);
+        StringBuilder result = new StringBuilder();
+
+        // separate observations by type
+        List<Observation> targetObs = new ArrayList<>();
+        List<Observation> calibObs = new ArrayList<>();
+        for (Observation obs : observations) {
+            if (obs instanceof VlbiObservation) {
+                targetObs.add(obs);
+            } else if (obs instanceof CalibrationObservation) {
+                calibObs.add(obs);
+            }
         }
-        proposalObservations.append(endTable);
-        return proposalObservations.toString();
+
+        if (!targetObs.isEmpty()) {
+            result.append(targetObservationsTable(targetObs));
+        }
+        if (!calibObs.isEmpty()) {
+            result.append(calibrationObservationsTable(calibObs));
+        }
+
+        return result.toString();
+    }
+
+    private String targetObservationsTable(List<Observation> observations) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(htmlHeader("Target observations"));
+        sb.append(startTable);
+        sb.append(beginHead).append("Target").append(headDelim)
+                .append("Phase reference").append(headDelim)
+                .append("Check sources").append(headDelim)
+                .append("Technical goal").append(headDelim)
+                .append("#epochs").append(headDelim)
+                .append("Cadence").append(headDelim)
+                .append("PlanObs").append(endHead);
+
+        for (Observation obs : observations) {
+            VlbiObservation vlbi = (VlbiObservation) obs;
+            Monitoring mon = obs.getMonitoring();
+            sb.append(beginRow)
+                    .append(targetNamesTable(Arrays.asList(obs.getTarget()))).append(tableDelim)
+                    .append(targetNamesTable(vlbi.getPhaseReference())).append(tableDelim)
+                    .append(targetNamesTable(vlbi.getCheckSource())).append(tableDelim)
+                    .append(obs.getTechnicalGoal().getId()).append(tableDelim)
+                    .append(mon != null && mon.getNumberOfEpochs() != null ? mon.getNumberOfEpochs() : "").append(tableDelim)
+                    .append(mon != null ? htmlEsc(mon.getCadenceDescription()) : "").append(tableDelim)
+                    .append(obs.getRequestedResources() != null && obs.getRequestedResources().getPlanObsConfig() != null && !obs.getRequestedResources().getPlanObsConfig().isEmpty()
+                        ? "<a href=\"https://planobs-test.jive.eu/" + htmlEsc(obs.getRequestedResources().getPlanObsConfig()) + "\">link</a>"
+                        : "")
+                    .append(endRow);
+
+            // time constraints subtable
+            if (obs.getConstraints() != null && !obs.getConstraints().isEmpty()) {
+                sb.append("<tr><td style=\"padding-left:2em\">Time constraints</td><td colspan=\"6\">")
+                        .append(timingWindowsTable(obs.getConstraints()))
+                        .append("</td></tr>\n");
+            }
+        }
+        sb.append(endTable);
+        return sb.toString();
+    }
+
+    private String calibrationObservationsTable(List<Observation> observations) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(htmlHeader("Calibration observations"));
+        sb.append(startTable);
+        sb.append(beginHead).append("Intents").append(headDelim)
+                .append("Target").append(headDelim)
+                .append("Technical goal").append(headDelim)
+                .append("#epochs").append(headDelim)
+                .append("Cadence").append(headDelim)
+                .append("PlanObs").append(endHead);
+
+        for (Observation obs : observations) {
+            CalibrationObservation calib = (CalibrationObservation) obs;
+            Monitoring mon = obs.getMonitoring();
+
+            // build intents string
+            StringBuilder intents = new StringBuilder();
+            if (calib.getIntents() != null) {
+                for (CalibrationTarget_intendedUse intent : calib.getIntents()) {
+                    if (intents.length() > 0) intents.append(", ");
+                    intents.append(intent.value());
+                }
+            }
+
+            sb.append(beginRow)
+                    .append(htmlEsc(intents.toString())).append(tableDelim)
+                    .append(targetNamesTable(Arrays.asList(obs.getTarget()))).append(tableDelim)
+                    .append(obs.getTechnicalGoal().getId()).append(tableDelim)
+                    .append(mon != null && mon.getNumberOfEpochs() != null ? mon.getNumberOfEpochs() : "").append(tableDelim)
+                    .append(mon != null ? htmlEsc(mon.getCadenceDescription()) : "").append(tableDelim)
+                    .append(obs.getRequestedResources() != null && obs.getRequestedResources().getPlanObsConfig() != null && !obs.getRequestedResources().getPlanObsConfig().isEmpty()
+                        ? "<a href=\"https://planobs-test.jive.eu/" + htmlEsc(obs.getRequestedResources().getPlanObsConfig()) + "\">link</a>"
+                        : "")
+                    .append(endRow);
+
+            // time constraints subtable
+            if (obs.getConstraints() != null && !obs.getConstraints().isEmpty()) {
+                sb.append("<tr><td style=\"padding-left:2em\">Time constraints</td><td colspan=\"5\">")
+                        .append(timingWindowsTable(obs.getConstraints()))
+                        .append("</td></tr>\n");
+            }
+        }
+        sb.append(endTable);
+        return sb.toString();
     }
 
 
