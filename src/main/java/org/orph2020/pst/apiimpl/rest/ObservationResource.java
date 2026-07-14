@@ -2,6 +2,7 @@ package org.orph2020.pst.apiimpl.rest;
 
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
+import jakarta.persistence.LockModeType;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.prop.*;
@@ -371,7 +372,8 @@ public class ObservationResource extends ObjectResourceBase {
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
         Observation observation =
                 findObservation(observingProposal.getObservations(), id, proposalCode);
-
+        // apparently need to manually lock when adding or removing rows with an _ORDER column
+        em.lock(observation, LockModeType.PESSIMISTIC_WRITE);
 
         return addNewChildObject(observation, constraint, observation::addToConstraints);
     }
@@ -398,6 +400,8 @@ public class ObservationResource extends ObjectResourceBase {
                                 "Observation", observationId)
                 ));
 
+        // apparently need to manually lock when adding or removing rows with an _ORDER column
+        em.lock(observation, LockModeType.PESSIMISTIC_WRITE);
         return deleteChildObject(observation, constraint, observation::removeFromConstraints);
     }
 
