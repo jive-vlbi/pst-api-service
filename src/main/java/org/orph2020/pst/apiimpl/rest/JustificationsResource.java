@@ -273,8 +273,9 @@ public class JustificationsResource extends ObjectResourceBase {
         currentUserChecks.assertCurrentUserIsTacMember(proposalCycle.getId());
 
         SubmittedProposal proposal = findObject(SubmittedProposal.class, proposalCode);
-        return Response.ok(proposalResource.CreateZipFile("Review.zip", proposal, true, false ))
-                .header("Content-Disposition", "attachment; filename=" + "Review.zip")
+        String zipFileName = proposalDocumentStore.getStoreRoot() + proposalCode.toString() + "/Review.zip";
+        return Response.ok(proposalResource.CreateZipFile(zipFileName, proposal, true, false))
+                .header("Content-Disposition", "attachment; filename=" + zipFileName)
                 .build();
 
     }
