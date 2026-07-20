@@ -9,8 +9,17 @@ import org.ivoa.dm.stc.coords.EquatorialPoint;
 import org.ivoa.dm.stc.coords.SpaceSys;
 import org.ivoa.vodml.stdtypes.Unit;
 
+import org.apache.commons.io.FilenameUtils;
+import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.ivoa.dm.proposal.prop.ObservingProposal;
+import org.jboss.resteasy.reactive.multipart.FileUpload;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.nio.file.Path;
 import java.util.*;
 
 public class TargetListFileReader {
@@ -183,5 +192,86 @@ public class TargetListFileReader {
         }
 
         return result;
+    }
+
+    private enum FileType {
+        PLAIN_TEXT,
+        STAR_TABLE_FMT
+    }
+
+    @Schema(type = SchemaType.STRING, format = "binary")
+    public static class UploadTargetList {}
+
+    private static String checkTargetListUpload(FileUpload fileUpload)
+            throws WebApplicationException {
+        if (fileUpload == null) {
+            throw new WebApplicationException("No file uploaded");
+        }
+
+        String contentType = fileUpload.contentType();
+        if (contentType == null) {
+            throw new WebApplicationException("No content type information available");
+        }
+
+        String extension = FilenameUtils.getExtension(fileUpload.fileName());
+        if (extension == null || extension.isEmpty()) {
+            throw new WebApplicationException("Uploads require the correct file extension");
+        }
+
+        switch (contentType) {
+            case "application/octet-stream": //cover-all
+            case "text/plain":
+            case "text/csv":
+            case "text/xml":
+                if (
+                        !extension.equals("xml") &&
+                        !extension.equals("txt") &&
+                        !extension.equals("csv") &&
+                        !extension.equals("ecsv")
+                ) {
+                    throw new WebApplicationException("Invalid file extension");
+                }
+                break;
+            default:
+                throw new WebApplicationException(
+                    String.format("content-type: %s is not supported", contentType));
+        }
+
+        return extension;
+    }
+
+    private static List<Target> getTargetListFromFile(
+            Path filePath,
+            FileType fileType,
+            SpaceSys spaceSys,
+            List<String> currentNames
+    ) throws WebApplicationException {
+        return switch (fileType) {
+            case PLAIN_TEXT -> readTargetListFile(
+                    filePath.toFile(),
+                    spaceSys,
+                    currentNames
+            );
+            case STAR_TABLE_FMT -> StarTableReader.convertToListOfTargets(
+                    filePath.toString(),
+                    spaceSys,
+                    currentNames
+            );
+        };
+    }
+
+    public static List<Target> getTargetListFromUpload(EntityManager em, List<String> currentNames, FileUpload fileUpload)
+            throws WebApplicationException {
+        String extension = checkTargetListUpload(fileUpload);
+
+        //find the 'ICRS' SpaceSys
+        String queryStr = "select s from SpaceSys s where s.frame.spaceRefFrame='ICRS'";
+        TypedQuery<SpaceSys> query = em.createQuery(queryStr, SpaceSys.class);
+        SpaceSys spaceSys = query.getResultList().get(0);
+
+        // assume anything not '.txt' is STILTS compatible (STILTS will throw useful error message if not)
+        FileType fileType = extension.equals("txt") ? FileType.PLAIN_TEXT : FileType.STAR_TABLE_FMT;
+
+        return getTargetListFromFile(fileUpload.uploadedFile(), fileType, spaceSys, currentNames);
     }
 }

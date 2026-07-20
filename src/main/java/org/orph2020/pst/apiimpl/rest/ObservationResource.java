@@ -4,10 +4,13 @@ import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.persistence.LockModeType;
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.ivoa.dm.proposal.prop.*;
 import org.jboss.resteasy.reactive.ResponseStatus;
+import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.RestQuery;
+import org.jboss.resteasy.reactive.multipart.FileUpload;
 import org.orph2020.pst.common.json.ObjectIdentifier;
 import org.orph2020.pst.apiimpl.CurrentUserChecks;
 
@@ -475,6 +478,44 @@ public class ObservationResource extends ObjectResourceBase {
         em.merge(monitoring);
 
         return monitoring;
+    }
+
+    @POST
+    @Path("/{observationId}/uploadMultiPhaseCenters")
+    @Operation(summary = "upload a list of targets contained in a file as phase centers for this observation")
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    public Response uploadMultiPhaseCenters(@PathParam("proposalCode") Long proposalCode,
+                                            @PathParam("observationId") Long observationId,
+                                            @RestForm("document") @Schema(implementation = TargetListFileReader.UploadTargetList.class)
+                                            FileUpload fileUpload)
+        throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+
+        List<Target> targetList = TargetListFileReader.getTargetListFromUpload(em, new ArrayList<>(), fileUpload);
+
+        VlbiObservation observation = findChildByQuery(ObservingProposal.class, VlbiObservation.class,
+                "observations", proposalCode, observationId);
+        observation.setMultiPhaseCenter(targetList);
+
+        return responseWrapper(observation.getMultiPhaseCenter(), 200);
+    }
+    
+    @DELETE
+    @Path("/{observationId}/multiPhaseCenters")
+    @Operation(summary = "clear the list of phase centers for this observation")
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    public Response deleteMultiPhaseCenters(@PathParam("proposalCode") Long proposalCode,
+                                            @PathParam("observationId") Long observationId)
+        throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+        VlbiObservation observation = findChildByQuery(ObservingProposal.class, VlbiObservation.class,
+                "observations", proposalCode, observationId);
+        observation.setMultiPhaseCenter(new ArrayList<>());
+
+        return emptyResponse204();
     }
 
 }
