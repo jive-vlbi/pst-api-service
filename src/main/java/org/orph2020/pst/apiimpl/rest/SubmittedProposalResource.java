@@ -251,6 +251,11 @@ public class SubmittedProposalResource extends ObjectResourceBase{
 
         ProposalCycle cycle =  findObject(ProposalCycle.class,cycleId);
 
+        Date submissionDeadline = cycle.getSubmissionDeadline();
+        if (submissionDeadline != null && new Date().after(submissionDeadline)) {
+            throw new WebApplicationException("The submission deadline has passed.", Response.Status.CONFLICT);
+        }
+
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalId);
 
         List<ObservationConfiguration> configMappings = new ArrayList<>();
