@@ -103,8 +103,8 @@ public class StarTableReader {
 
                 tableTargetNames.add(name);
 
-                double raValue =  (double) starTable.getCell(i, raIndex);
-                double decValue =  (double) starTable.getCell(i, decIndex);
+                double raValue =  ((Number)starTable.getCell(i, raIndex)).doubleValue();
+                double decValue =  ((Number)starTable.getCell(i, decIndex)).doubleValue();
 
                 Object pmRaObj = pmRaIndex == -1 ? null : starTable.getCell(i, pmRaIndex);
                 Object pmDecObj = pmDecIndex == -1 ? null :starTable.getCell(i, pmDecIndex);
@@ -112,25 +112,25 @@ public class StarTableReader {
                 Object rvObj = rvIndex == -1 ? null : starTable.getCell(i, rvIndex);
 
                 double pmRaValue = pmRaIndex == -1 ? 0 : Objects.equals(pmRaObj.toString(), "NaN") ? 0 :
-                        (double) pmRaObj;
+                        ((Number)pmRaObj).doubleValue();
                 String pmRaUnit = pmRaIndex == -1 ? "" :
                         starTable.getColumnInfo(pmRaIndex).getUnitString() == null ? "mas.yr-1" :
                                 starTable.getColumnInfo(pmRaIndex).getUnitString();
 
                 double pmDecValue = pmDecIndex == -1 ? 0 : Objects.equals(pmDecObj.toString(), "NaN") ? 0 :
-                        (double) pmDecObj;
+                        ((Number)pmDecObj).doubleValue();
                 String pmDecUnit = pmDecIndex == -1 ? "" :
                         starTable.getColumnInfo(pmDecIndex).getUnitString() == null ? "mas.yr-1" :
                                 starTable.getColumnInfo(pmDecIndex).getUnitString();
 
                 double plxValue = plxIndex == -1 ? 0 : Objects.equals(plxObj.toString(), "NaN") ? 0 :
-                        (double) plxObj;
+                        ((Number)plxObj).doubleValue();
                 String plxUnit = plxIndex == -1 ? "" :
                         starTable.getColumnInfo(plxIndex).getUnitString() == null ? "mas" :
                                 starTable.getColumnInfo(plxIndex).getUnitString();
 
                 double rvValue = rvIndex == -1 ? 0 : Objects.equals(rvObj.toString(), "NaN") ? 0 :
-                        (double) rvObj;
+                        ((Number)rvObj).doubleValue();
                 String rvUnit = rvIndex == -1 ? "" :
                         starTable.getColumnInfo(rvIndex).getUnitString() == null ? "km.yr-1" :
                                 starTable.getColumnInfo(rvIndex).getUnitString();
