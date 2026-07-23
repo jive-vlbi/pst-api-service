@@ -83,9 +83,9 @@ public class StarTableReader {
 
             // NAME, RA_d, Dec_d, [PMRA, PMDEC, PLX, RV]
 
-            int idIndex = findNameColumnIndex(starTable);
-            int raIndex = findColumnIndex(starTable, "^RA");
-            int decIndex = findColumnIndex(starTable, "^DEC");
+            int idIndex = findColumnIndex(starTable, "meta.id", List.of("^ID", "^NAME", "^MAIN_ID"));
+            int raIndex = findColumnIndex(starTable, "pos.eq.ra", List.of("^RA"));
+            int decIndex = findColumnIndex(starTable, "pos.eq.dec", List.of("^DEC"));
 
             String errorMessage = "";
 
@@ -117,10 +117,10 @@ public class StarTableReader {
             }
 
             //these are optional - either they don't exist as columns or they exist but have null data
-            int pmRaIndex = findColumnIndex(starTable, "^PMRA");
-            int pmDecIndex = findColumnIndex(starTable, "^PMDEC");
-            int plxIndex = findColumnIndex(starTable, "^PLX");
-            int rvIndex = findColumnIndex(starTable, "^RV");
+            int pmRaIndex = findColumnIndex(starTable, "", List.of("^PMRA")); // proper motion has UCD pos.pm as vector
+            int pmDecIndex = findColumnIndex(starTable, "", List.of("^PMDEC"));
+            int plxIndex = findColumnIndex(starTable, "pos.parallax", List.of("^PLX"));
+            int rvIndex = findColumnIndex(starTable, "", List.of("^RV"));
 
             HashMap<Integer, String> nonUniqueNames = new HashMap<>();
 
@@ -222,19 +222,7 @@ public class StarTableReader {
         return new StarTableFactory(true).makeStarTable( resourceLocation );
     }
 
-    //attempt to find an identifying name column index
-    private static int findNameColumnIndex(StarTable starTable) {
-        int resultId = findColumnIndex(starTable, "^ID");
-
-        int resultName = findColumnIndex(starTable, "^NAME");
-
-        int resultMainId = findColumnIndex(starTable, "^MAIN_ID");
-
-        return resultId > -1 ? resultId : resultName > -1 ? resultName : resultMainId;
-    }
-
-    private static int
-    findColumnIndex(StarTable starTable, String columnNamePattern)  {
+    private static int findColumnIndex(StarTable starTable, String columnNamePattern)  {
 
         Pattern pattern = Pattern.compile(columnNamePattern, Pattern.CASE_INSENSITIVE);
 
@@ -251,6 +239,28 @@ public class StarTableReader {
         }
 
         return iCol;
+    }
+
+    private static int findColumnIndex(StarTable starTable, String ucd, List<String> columnNamePatterns) {
+        // First try to find by UCD
+        int iCol = 0;
+        int nCol = starTable.getColumnCount();
+        do {
+            if (starTable.getColumnInfo(iCol).getUCD() != null && 
+                Arrays.asList(starTable.getColumnInfo(iCol).getUCD().split(";")).contains(ucd)) {
+                return iCol;
+            }
+        } while (++iCol < nCol);
+        
+        // If not found by UCD, try by column name patterns
+        for (String pattern : columnNamePatterns) {
+            int result = findColumnIndex(starTable, pattern);
+            if (result != -1) {
+                return result;
+            }
+        }
+        
+        return -1;
     }
 
     private static long getRows(StarTable starTable) throws WebApplicationException, IOException {
