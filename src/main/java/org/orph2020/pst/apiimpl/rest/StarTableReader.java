@@ -16,6 +16,41 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class StarTableReader {
+    
+    /**
+     * Converts a string representation of coordinates in hours/degrees format to decimal degrees.
+     * 
+     * @param value The string to parse (e.g., "12:34:56.78" or "-12h34m56.78s")
+     * @param mode Either "hms" for hours/minutes/seconds or "dms" for degrees/minutes/seconds
+     * @return The degree value, or null if parsing fails
+     */
+    public static Double xmsToDeg(String value, String mode) {
+        // match strings like +21:12:34.56, 21 12 34.56 or 12h34m56.78s if mode is "hms"
+        Pattern regexp;
+        if (mode.equals("hms")) {
+            regexp = Pattern.compile("(?<sign>[+-])?(?<hd>\\d{1,2})[: hH](?<m>\\d{1,2})[: mM](?<s>\\d{1,2}(\\.\\d+)?)[sS]?");
+        }
+        else {
+            regexp = Pattern.compile("(?<sign>[+-])?(?<hd>\\d{1,2})[: ](?<m>\\d{1,2})[: ](?<s>\\d{1,2}(\\.\\d+)?)");
+        }
+
+        Matcher matcher = regexp.matcher(value);
+        if (!matcher.matches()) {
+            return null;
+        }
+
+        double ret = Integer.parseInt(matcher.group("hd"));
+        ret += Integer.parseInt(matcher.group("m")) / 60.0;
+        ret += Double.parseDouble(matcher.group("s")) / 3600.0;
+
+        if (mode.equals("hms")) {
+            ret *= 15;
+        }
+        if (matcher.group("sign") != null && matcher.group("sign").equals("-")) {
+            ret *= -1;
+        }
+        return ret;
+    }
 
     public static List<Target> convertToListOfTargets(
             String resource,

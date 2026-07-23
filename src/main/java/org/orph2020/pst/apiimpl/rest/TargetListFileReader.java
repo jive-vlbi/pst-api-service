@@ -109,8 +109,21 @@ public class TargetListFileReader {
 
                         tableTargetNames.add(targetName);
 
-                        Double targetRA = Double.valueOf(tokens[headerIndices.get("ra")].trim());
-                        Double targetDEC = Double.valueOf(tokens[headerIndices.get("dec")].trim());
+                        String raValue = tokens[headerIndices.get("ra")].trim();
+                        String decValue = tokens[headerIndices.get("dec")].trim();
+                        
+                        // try to parse the coordinates as hours/degrees, if that fails, assume a decimal degree value
+                        Double computedRA = StarTableReader.xmsToDeg(raValue, "hms");
+                        if (computedRA == null) {
+                            computedRA = Double.valueOf(raValue);
+                        }
+                        Double computedDEC = StarTableReader.xmsToDeg(decValue, "dms");
+                        if (computedDEC == null) {
+                            computedDEC = Double.valueOf(decValue);
+                        }
+
+                        final Double targetRA = computedRA;
+                        final Double targetDEC = computedDEC;
 
                         CelestialTarget target = CelestialTarget.createCelestialTarget(c -> {
                             c.sourceName = targetName;
