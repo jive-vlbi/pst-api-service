@@ -70,8 +70,6 @@ public class UserProposalsSubmitted extends ObjectResourceBase {
         //Filter either by observing cycle, or only new and current observing cycles.
         if (cycleId > 0)
             queryStr += " and c._id = " + cycleId;
-        else
-            queryStr += " and c.observationSessionEnd >= current_date()";
 
         Query query = em.createQuery(queryStr);
         List<ObjectIdentifier[]> results = query.getResultList();

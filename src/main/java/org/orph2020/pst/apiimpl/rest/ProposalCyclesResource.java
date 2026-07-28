@@ -214,8 +214,7 @@ public class ProposalCyclesResource extends ObjectResourceBase {
         ProposalCycle fullCycle =  findObject(ProposalCycle.class, cycleCode);
 
         return new ProposalCycleSynopsis(fullCycle.getTitle(), fullCycle.getCode(),
-                fullCycle.getSubmissionDeadline(), fullCycle.getObservationSessionStart(),
-                fullCycle.getObservationSessionEnd(), fullCycle.getObservatory(), fullCycle.getIsImmediate());
+                fullCycle.getSubmissionDeadline(), fullCycle.getObservatory(), fullCycle.getIsImmediate());
 
     }
 
@@ -237,14 +236,11 @@ public class ProposalCyclesResource extends ObjectResourceBase {
         cycle.setTitle(newDetails.title);
         cycle.setCode(newDetails.code);
         cycle.setSubmissionDeadline(newDetails.submissionDeadline);
-        cycle.setObservationSessionStart(newDetails.observationSessionStart);
-        cycle.setObservationSessionEnd(newDetails.observationSessionEnd);
         cycle.setObservatory(newDetails.observatory);
         cycle.setIsImmediate(newDetails.isImmediate);
 
         return new ProposalCycleSynopsis(cycle.getTitle(), cycle.getCode(),
-                cycle.getSubmissionDeadline(), cycle.getObservationSessionStart(),
-                cycle.getObservationSessionEnd(), cycle.getObservatory(), cycle.getIsImmediate());
+                cycle.getSubmissionDeadline(), cycle.getObservatory(), cycle.getIsImmediate());
     }
 
     @PUT
@@ -265,47 +261,6 @@ public class ProposalCyclesResource extends ObjectResourceBase {
         cycle.setSubmissionDeadline(replacementDeadline);
 
         return responseWrapper(cycle.getSubmissionDeadline(), 200);
-    }
-
-
-    @PUT
-    @Path("{cycleCode}/dates/sessionStart")
-    @Operation(summary = "change the observation session start of the given proposal cycle")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @RolesAllowed("tac_admin")
-    @Transactional(rollbackOn = {WebApplicationException.class})
-    public Response replaceCycleSessionStart(
-            @PathParam("cycleCode") Long cycleCode,
-            Date replacementStart
-    )
-            throws WebApplicationException
-    {
-        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
-
-        ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
-        cycle.setObservationSessionStart(replacementStart);
-
-        return responseWrapper(cycle.getObservationSessionStart(), 200);
-    }
-
-    @PUT
-    @Path("{cycleCode}/dates/sessionEnd")
-    @Operation(summary = "change the observation session end of the given proposal cycle")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @RolesAllowed("tac_admin")
-    @Transactional(rollbackOn = {WebApplicationException.class})
-    public Response replaceCycleSessionEnd(
-            @PathParam("cycleCode") Long cycleCode,
-            Date replacementEnd
-    )
-            throws WebApplicationException
-    {
-        currentUserChecks.assertCurrentUserIsTacChair(cycleCode);
-
-        ProposalCycle cycle = findObject(ProposalCycle.class, cycleCode);
-        cycle.setObservationSessionEnd(replacementEnd);
-
-        return responseWrapper(cycle.getObservationSessionEnd(), 200);
     }
 
 
