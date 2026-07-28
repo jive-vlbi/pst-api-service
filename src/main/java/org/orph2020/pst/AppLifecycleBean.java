@@ -41,60 +41,6 @@ public class AppLifecycleBean {
     void onStart(@Observes StartupEvent ev) {
         LOGGER.info("The application is starting...");
 
-        Long i = em.createQuery("select count(o) from Observatory o", Long.class).getSingleResult();
-        if(i.intValue() == 0) {
-            LOGGER.info("initializing Database");
-           // add the example proposals.
-            FullExample fullExample = new FullExample();
-            List<ProposalCycle> cycles = fullExample.getManagementModel().getContent(ProposalCycle.class);
-            LocalDate now = LocalDate.now();
-            for (ProposalCycle cycle : cycles) {
-                cycle.setSubmissionDeadline(new Date(now.plusWeeks(2).atStartOfDay().atOffset(ZoneOffset.UTC).toEpochSecond()*1000));
-                cycle.setObservationSessionStart(new Date(now.plusMonths(2).atStartOfDay().atOffset(ZoneOffset.UTC).toEpochSecond()*1000));
-                cycle.setObservationSessionEnd(new Date(now.plusMonths(6).atStartOfDay().atOffset(ZoneOffset.UTC).toEpochSecond()*1000));
-                cycle.setIsImmediate(false);
-            }
-            fullExample.saveTodB(em);
-
-            for(ObservingProposal pr: fullExample.getProposalModel().getContent(ObservingProposal.class))
-                try {
-                    proposalDocumentStore.createStorePaths(pr.getId());
-                } catch (IOException e) {
-                    LOGGER.error(e);
-                    throw new RuntimeException(e);
-                }
-        }
-
-        //only try to populate the SubjectMap if not already done
-        TypedQuery<SubjectMap> sq = em.createQuery("select o from SubjectMap o where o.uid = 'bb0b065f-6dc3-4062-9b3e-525c1a1a9bec'", SubjectMap.class);
-        if(sq.getResultList().isEmpty()) {
-
-            TypedQuery<Person> pq = em.createQuery("select o from Person o", Person.class);
-            for (Person p : pq.getResultList()) {
-                switch (p.getEMail()) {
-                    case "pi@unreal.not.email":
-                        em.persist(new SubjectMap(p, "bb0b065f-6dc3-4062-9b3e-525c1a1a9bec"));
-                        break;
-                    case "reviewer@unreal.not.email":
-                        em.persist(new SubjectMap(p, "dda2fd0b-8bb4-4dd1-a216-f75087f3d946"));
-                        break;
-                    case "tacchair@unreal.not.email":
-                        em.persist(new SubjectMap(p, "b0f7b98e-ec1e-4cf9-844c-e9f192c97745"));
-                        break;
-                    case "coi@unreal.not.email":
-                        em.persist(new SubjectMap(p, "33767eee-35a1-4fef-b32a-f9b6fa6b36e6"));
-                        break;
-                        //this typo comes from the data model (member)
-                    case "tacmamber@unreal.not.email":
-                        em.persist(new SubjectMap(p, "26da8f8f-5a10-4606-89a6-391979a7624b"));
-                        break;
-                    default:
-                        //do nothing
-                        break;
-                }
-
-            }
-        }
     }
 
     void onStop(@Observes ShutdownEvent ev) {
