@@ -51,6 +51,29 @@ public class JustificationsResource extends ObjectResourceBase {
     @Inject
     CurrentUserChecks currentUserChecks;
 
+    private static final int MAX_CHARS_TECHNICAL = 5000;
+    private static final int MAX_CHARS_SCIENTIFIC = 15000;
+
+    private void assertJustificationLength(String which, Justification incoming)
+            throws WebApplicationException {
+        int limit = switch (which) {
+            case "technical" -> MAX_CHARS_TECHNICAL;
+            case "scientific" -> MAX_CHARS_SCIENTIFIC;
+            default -> throw new WebApplicationException(
+                    String.format("Justifications are either 'technical' or 'scientific', I got '%s'", which),
+                    400
+            );
+        };
+        int textLength = incoming.getText() == null ? 0 : incoming.getText().length();
+        if (textLength > limit) {
+            throw new WebApplicationException(
+                    String.format("%s justification text exceeds the %d character limit (received %d characters)",
+                            which, limit, textLength),
+                    400
+            );
+        }
+    }
+
     @GET
     @Path("{which}")
     @Operation(summary = "get the technical or scientific justification associated with the ObservingProposal specified by 'proposalCode'")
@@ -93,6 +116,7 @@ public class JustificationsResource extends ObjectResourceBase {
         throws WebApplicationException
     {
         currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+        assertJustificationLength(which, incoming);
         Justification justification = getWhichJustification(proposalCode, which);
 
         if (justification == null) {
@@ -119,6 +143,7 @@ public class JustificationsResource extends ObjectResourceBase {
             throws WebApplicationException
     {
         currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+        assertJustificationLength(which, incoming);
         ObservingProposal proposal = findObject(ObservingProposal.class, proposalCode);
         Justification justification = getWhichJustification(proposalCode, which);
 
