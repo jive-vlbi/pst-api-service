@@ -149,6 +149,7 @@ public class ObservationResource extends ObjectResourceBase {
         }
 
         ObservingProposal observingProposal = findObject(ObservingProposal.class, proposalCode);
+        new ProposalModel().createContext();
         // Notice the use of 'copyMe' to clone any input observation in case it has been cloned
         // in the GUI and has any database Ids in it. Also note that if Observation were not
         // abstract then copy constructor would be the correct thing to do.
