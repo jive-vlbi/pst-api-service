@@ -701,7 +701,7 @@ public class JustificationsResource extends ObjectResourceBase {
             ));
         }
 
-        if (scientific.getFormat() != TextFormats.LATEX && technical.getFormat() != TextFormats.LATEX) {
+        if (scientific.getFormat() != TextFormats.LATEX || technical.getFormat() != TextFormats.LATEX) {
             throw new WebApplicationException(String.format(
                     "Both justifications must be latex format, current formats scientific: %s, technical: %s",
                     scientific.getFormat().toString(), technical.getFormat().toString()
