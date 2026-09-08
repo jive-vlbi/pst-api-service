@@ -281,7 +281,7 @@ public class ProposalDocumentStore {
     private void insertTitleAndCycleCodeIntoHeaderTex(
             Long proposalCode,
             String proposalTitle,
-            String observingProposalName
+            String cycleName
     )
             throws IOException {
         String proposalTitleTarget = "PROPOSAL-TITLE-HERE";
@@ -291,18 +291,15 @@ public class ProposalDocumentStore {
         try (InputStream is = Objects.requireNonNull(
                 ProposalDocumentStore.class.getResourceAsStream("/justificationsHeaderTemplate.tex"))) {
 
-           try (InputStreamReader isr = new InputStreamReader(is);
-                BufferedReader reader = new BufferedReader(isr)) {
-              String templateText = reader.lines().collect(Collectors.joining(System.lineSeparator()));
+            String templateText = new String(is.readAllBytes(), java.nio.charset.Charset.defaultCharset());
 
-              String headerText = observingProposalName != null ?
+            String headerText = cycleName != null ?
                     templateText.replace(proposalTitleTarget, proposalTitle)
-                          .replace(cycleCodeTarget, observingProposalName)
+                          .replace(cycleCodeTarget, cycleName)
                     :
                     templateText.replace(proposalTitleTarget, proposalTitle);
 
-              writeStringToFile(headerText, proposalCode + "/" + justificationsPath + "justificationsHeader.tex");
-           }
+            writeStringToFile(headerText, proposalCode + "/" + justificationsPath + "justificationsHeader.tex");
         }
     }
 }
