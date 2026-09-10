@@ -554,6 +554,35 @@ public class ProposalResource extends ObjectResourceBase {
         return deleteChildObject(observingProposal, target, observingProposal::removeFromTargets);
     }
 
+    @PUT
+    @Path(targetsRoot+"/{targetId}")
+    @Operation(summary = "replace the Target specified by 'targetId' in the given ObservingProposal")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @ResponseStatus(201)
+    @Transactional(rollbackOn = {WebApplicationException.class})
+    @RolesAllowed("default-roles-orppst")
+    public Target replaceTarget(@PathParam("proposalCode") Long proposalCode,
+                                @PathParam("targetId") Long targetId,
+                                Target replacementTarget)
+            throws WebApplicationException
+    {
+        currentUserChecks.assertCurrentUserIsInvestigator(proposalCode);
+
+        Target target = findChildByQuery(ObservingProposal.class, Target.class, "targets",
+                proposalCode, targetId);
+
+        if (target instanceof CelestialTarget && replacementTarget instanceof CelestialTarget) {
+            ((CelestialTarget) target).updateUsing((CelestialTarget) replacementTarget);
+        } else if (target.getClass().equals(replacementTarget.getClass())) {
+            target.updateUsing(replacementTarget);
+        } else {
+            throw new WebApplicationException(
+                    "Replacement Target must be of the same type as the existing Target", 422);
+        }
+
+        return target;
+    }
+
 
     // field operations
     @GET
