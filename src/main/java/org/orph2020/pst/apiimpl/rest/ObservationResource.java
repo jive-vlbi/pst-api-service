@@ -496,6 +496,11 @@ public class ObservationResource extends ObjectResourceBase {
 
         List<Target> targetList = TargetListFileReader.getTargetListFromUpload(em, new ArrayList<>(), fileUpload);
 
+        if (!fileUpload.uploadedFile().toFile().delete())
+        {
+            throw new WebApplicationException("unable to delete uploaded file: " + fileUpload.fileName(), 400);
+        }
+
         VlbiObservation observation = findChildByQuery(ObservingProposal.class, VlbiObservation.class,
                 "observations", proposalCode, observationId);
         observation.setMultiPhaseCenter(targetList);
