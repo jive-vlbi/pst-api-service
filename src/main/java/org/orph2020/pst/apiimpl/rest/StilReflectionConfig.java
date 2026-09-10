@@ -12,8 +12,14 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
  * "... not found - can't register" for every builder and target list uploads fail
  * with "no table handlers available".
  *
- * The class names below are the default and known builder lists of
- * {@code StarTableFactory} in STIL 4.1.4.
+ * The class names below are a subset of the default and known builder lists of
+ * {@code StarTableFactory} in STIL 4.1.4. The Parquet, PDS4, Feather and GBIN
+ * builders are deliberately omitted: they depend on optional libraries
+ * (parquet-mr, NASA pds4-jparser, Gaia tools) that are not on the classpath,
+ * which makes the native image build fail with "Discovered unresolved method
+ * during parsing" if they are registered. StarTableFactory logs them as
+ * "not found - can't register" and carries on, matching JVM behaviour for
+ * absent optional formats.
  */
 @RegisterForReflection(classNames = {
         // default (auto-detected) builders
@@ -24,11 +30,7 @@ import io.quarkus.runtime.annotations.RegisterForReflection;
         "uk.ac.starlink.votable.VOTableBuilder",
         "uk.ac.starlink.cdf.CdfTableBuilder",
         "uk.ac.starlink.ecsv.EcsvTableBuilder",
-        "uk.ac.starlink.pds4.Pds4TableBuilder",
         "uk.ac.starlink.table.formats.MrtTableBuilder",
-        "uk.ac.starlink.parquet.ParquetTableBuilder",
-        "uk.ac.starlink.feather.FeatherTableBuilder",
-        "uk.ac.starlink.gbin.GbinTableBuilder",
         // known (named format) builders
         "uk.ac.starlink.table.formats.AsciiTableBuilder",
         "uk.ac.starlink.table.formats.CsvTableBuilder",
